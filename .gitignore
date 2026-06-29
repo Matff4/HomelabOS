@@ -16,7 +16,6 @@ shell/dist/
 
 # Runtime data
 data/*.json
-data/dev-vnc.password
 data/plugins/
 !data/.gitkeep
 
