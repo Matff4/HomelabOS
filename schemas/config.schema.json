@@ -1,16 +1,85 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://homelabos.local/schemas/config.schema.json",
+  "additionalProperties": false,
+  "description": "System-wide UI preferences persisted in data/config.json.",
+  "properties": {
+    "timeFormat": {
+      "default": "24",
+      "enum": [
+        "12",
+        "24"
+      ],
+      "title": "Timeformat",
+      "type": "string"
+    },
+    "ramFormat": {
+      "default": "percent",
+      "enum": [
+        "percent",
+        "absolute"
+      ],
+      "title": "Ramformat",
+      "type": "string"
+    },
+    "theme": {
+      "default": "dark",
+      "enum": [
+        "dark",
+        "light"
+      ],
+      "title": "Theme",
+      "type": "string"
+    },
+    "barHeight": {
+      "default": "medium",
+      "enum": [
+        "small",
+        "medium",
+        "big"
+      ],
+      "title": "Barheight",
+      "type": "string"
+    },
+    "widgetBarHeight": {
+      "default": "medium",
+      "enum": [
+        "small",
+        "medium",
+        "big"
+      ],
+      "title": "Widgetbarheight",
+      "type": "string"
+    },
+    "accentColor": {
+      "default": "blue",
+      "enum": [
+        "blue",
+        "green",
+        "purple",
+        "red",
+        "orange",
+        "yellow"
+      ],
+      "title": "Accentcolor",
+      "type": "string"
+    },
+    "marketplaceUrl": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Marketplaceurl"
+    }
+  },
   "title": "HomelabOS System Config",
   "type": "object",
-  "properties": {
-    "timeFormat": { "enum": ["12", "24"] },
-    "ramFormat": { "enum": ["percent", "absolute"] },
-    "theme": { "enum": ["dark", "light"] },
-    "barHeight": { "enum": ["small", "medium", "big"] },
-    "widgetBarHeight": { "enum": ["small", "medium", "big"] },
-    "accentColor": { "enum": ["blue", "green", "purple", "red", "orange", "yellow"] },
-    "marketplaceUrl": { "type": "string", "format": "uri" }
-  },
-  "additionalProperties": false
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://homelabos.local/schemas/config.schema.json"
 }

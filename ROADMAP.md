@@ -24,8 +24,14 @@ homelabos/
 
 ### Phase 0 — Contracts
 - [x] Repo restructure, install script, roadmap
-- [ ] Pydantic models + JSON schemas (manifest, layout, config)
-- [ ] Frozen core API + SDK surface
+- [x] Pydantic models + JSON schemas (manifest, layout, config) — see `core/models/`, `docs/CONTRACTS.md`
+- [x] Frozen core API + SDK surface — `docs/CONTRACTS.md`, `sdk/src/types.ts`
+- [x] Regenerate schemas: `python scripts/generate_schemas.py`
+
+### Phase 0.5 — Platform bootstrap (done)
+- [x] Resumable `install.sh` + `homelabos-update`
+- [x] Cage + Chromium kiosk, quiet boot, optional wayvnc dev mirror
+- [x] Minimal bootable core (`GET /api/health` + shell placeholder)
 
 ### Phase 1 — Core (~1 week)
 - FastAPI app factory + lifespan
@@ -70,6 +76,8 @@ homelabos/
 
 ## Core API (target)
 
+Frozen request/response shapes: **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
+
 ```
 GET  /api/health
 GET  /api/system/stats
@@ -95,22 +103,17 @@ DELETE /api/plugins/{id}
 
 ## SDK Surface (target)
 
-```ts
-HomelabOS.version
-HomelabOS.platform          // { kiosk, theme, accent }
-HomelabOS.fetch(url, opts)
-HomelabOS.subscribe(ch, fn) // parent relay in iframes
-HomelabOS.config            // get / set instance config
-HomelabOS.settings          // widget settings schema flow
-```
+Frozen TypeScript types: `sdk/src/types.ts`. Full implementation in Phase 3.
 
-## Sprint 1 (current)
+## Sprint 1 — complete
 
 1. Scaffold repo ✓
 2. Install script for fresh Pi OS ✓
-3. Minimal bootable core (health + static shell placeholder)
-4. JSON schemas
-5. Dev mode on laptop (`HOMELABOS_DEV=1`)
+3. Minimal bootable core (health + static shell placeholder) ✓
+4. JSON schemas (generated from Pydantic) ✓
+5. Dev mode on laptop (`HOMELABOS_DEV=1`) ✓
+
+**Next:** Phase 1 — core platform (JSON store, routes, SSE, plugin loader).
 
 ## Performance Goals
 

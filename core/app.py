@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from core import __version__
+from core.models.api import HealthResponse
 from core.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -25,13 +26,12 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     async def health():
-        return {
-            "status": "ok",
-            "version": __version__,
-            "dev": settings.dev,
-            "mock_hal": settings.mock_hal,
-            "time": datetime.now(UTC).isoformat(),
-        }
+        return HealthResponse(
+            version=__version__,
+            dev=settings.dev,
+            mock_hal=settings.mock_hal,
+            time=datetime.now(UTC),
+        ).model_dump(mode="json")
 
     # Static shell (built by Vite) or placeholder
     dist = settings.shell_dist_dir

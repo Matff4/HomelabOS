@@ -1,20 +1,71 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://homelabos.local/schemas/layout.schema.json",
+  "$defs": {
+    "LayoutItem": {
+      "additionalProperties": false,
+      "description": "One widget instance on the dashboard grid.",
+      "properties": {
+        "instance_id": {
+          "description": "Unique instance id, e.g. inst_1710000000123",
+          "title": "Instance Id",
+          "type": "string"
+        },
+        "component_id": {
+          "description": "Globally unique component id from a plugin manifest",
+          "title": "Component Id",
+          "type": "string"
+        },
+        "x": {
+          "minimum": 0,
+          "title": "X",
+          "type": "integer"
+        },
+        "y": {
+          "minimum": 0,
+          "title": "Y",
+          "type": "integer"
+        },
+        "w": {
+          "minimum": 1,
+          "title": "W",
+          "type": "integer"
+        },
+        "h": {
+          "minimum": 1,
+          "title": "H",
+          "type": "integer"
+        },
+        "pane": {
+          "description": "Workspace pane index (0 = first)",
+          "minimum": 0,
+          "title": "Pane",
+          "type": "integer"
+        },
+        "config": {
+          "additionalProperties": true,
+          "description": "Per-instance widget settings",
+          "title": "Config",
+          "type": "object"
+        }
+      },
+      "required": [
+        "instance_id",
+        "component_id",
+        "x",
+        "y",
+        "w",
+        "h",
+        "pane"
+      ],
+      "title": "LayoutItem",
+      "type": "object"
+    }
+  },
+  "description": "Dashboard layout persisted in data/layout.json.",
+  "items": {
+    "$ref": "#/$defs/LayoutItem"
+  },
   "title": "HomelabOS Dashboard Layout",
   "type": "array",
-  "items": {
-    "type": "object",
-    "required": ["instance_id", "component_id", "x", "y", "w", "h", "pane"],
-    "properties": {
-      "instance_id": { "type": "string" },
-      "component_id": { "type": "string" },
-      "x": { "type": "integer", "minimum": 0 },
-      "y": { "type": "integer", "minimum": 0 },
-      "w": { "type": "integer", "minimum": 1 },
-      "h": { "type": "integer", "minimum": 1 },
-      "pane": { "type": "integer", "minimum": 0 },
-      "config": { "type": "object" }
-    }
-  }
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://homelabos.local/schemas/layout.schema.json"
 }

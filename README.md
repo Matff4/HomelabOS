@@ -43,11 +43,10 @@ sudo /opt/homelabos/scripts/dev-vnc.sh status
 
 ## Development (local machine)
 
+See [DEVELOPMENT.md](DEVELOPMENT.md) and [docs/CONTRACTS.md](docs/CONTRACTS.md).
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-HOMELABOS_DEV=1 python -m core
+python scripts/dev.py
 ```
 
 Open http://localhost:8000
