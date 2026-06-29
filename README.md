@@ -1,10 +1,10 @@
 # HomelabOS v2
 
-Kiosk dashboard platform for Raspberry Pi homelabs.
+Kiosk dashboard platform for Raspberry Pi.
 
 ## Install on fresh Raspberry Pi OS (64-bit)
 
-Flash SD card with [Raspberry Pi Imager](https://www.raspberrypi.com/software/) — create your user account there (recommended). Then SSH in or open a terminal:
+Flash SD card with [Raspberry Pi Imager](https://www.raspberrypi.com/software/) — Then SSH in or open a terminal:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Matff4/HomelabOS/main/install.sh | sudo bash
@@ -43,4 +43,4 @@ sudo bash install.sh              # copies to /opt/homelabos
 sudo bash install.sh --in-place   # run directly from clone
 ```
 
-See [ROADMAP.md](ROADMAP.md) for the v2 plan. v1 PoC code is in `old/`.
+See [ROADMAP.md](ROADMAP.md)
