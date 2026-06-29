@@ -43,4 +43,19 @@ sudo /opt/homelabos/scripts/quiet-boot.sh disable && sudo reboot
 sudo /opt/homelabos/scripts/quiet-boot.sh status
 ```
 
-Moves kernel console from `tty1` (kiosk display) to `tty3` so e2fsck/socket lines stay off the panel. Debug boot issues via SSH or Ctrl+Alt+F3.
+Install: `homelabos-update --quiet-boot`
+
+## Dev VNC (wayvnc)
+
+Mirrors the live Cage kiosk display — same pixels as the HDMI panel.
+
+```bash
+homelabos-update --dev-vnc
+```
+
+Connect: `<pi-ip>:5900` with TigerVNC / RealVNC Viewer. User `homelabos`, password in `/opt/homelabos/data/dev-vnc.password`.
+
+```bash
+sudo /opt/homelabos/scripts/dev-vnc.sh status
+homelabos-update --no-dev-vnc   # remove
+```

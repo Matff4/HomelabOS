@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+shell/dist/
+
+# Runtime data
+data/*.json
+data/dev-vnc.password
+data/plugins/
+!data/.gitkeep
+
+# Local-only prototype (not in GitHub repo)
+old/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+**/config.json
+!schemas/**

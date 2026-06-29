@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # Bump when debugging install issues — printed at runtime so you can verify what ran.
-INSTALLER_REV="2025-06-29-4"
+INSTALLER_REV="2025-06-29-5"
 INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/Matff4/HomelabOS/refs/heads/master/install.sh"
 
 INSTALL_DIR="/opt/homelabos"
@@ -22,6 +22,8 @@ IN_PLACE=0
 SKIP_KIOSK=0
 SKIP_BUILD=0
 QUIET_BOOT=0
+DEV_VNC=0
+NO_DEV_VNC=0
 SERVICE_USER=""
 
 while [[ $# -gt 0 ]]; do
@@ -34,6 +36,8 @@ while [[ $# -gt 0 ]]; do
     --skip-kiosk) SKIP_KIOSK=1 ;;
     --skip-build) SKIP_BUILD=1 ;;
     --quiet-boot) QUIET_BOOT=1 ;;
+    --dev-vnc)    DEV_VNC=1 ;;
+    --no-dev-vnc) NO_DEV_VNC=1 ;;
     -h|--help)
       cat <<EOF
 HomelabOS installer
@@ -47,9 +51,10 @@ Options:
   --skip-kiosk    API only
   --skip-build    Skip npm shell build
   --quiet-boot    Hide Pi splash and boot text on display (reboot required)
+  --dev-vnc       Install wayvnc to mirror the kiosk display (development)
+  --no-dev-vnc    Remove dev VNC service
 
-Pass flags: homelabos-update --quiet-boot
-  (after first install; or: curl ... | sudo bash -s -- --quiet-boot)
+Pass flags: homelabos-update --dev-vnc
 
 Note: branch is NOT read from environment variables (avoids stale HOMELABOS_BRANCH=main).
 EOF
@@ -209,12 +214,20 @@ fi
 echo "==> [4/7] homelabos.service..."
 ENV_FILE="$INSTALL_DIR/.env"
 PREV_QUIET_BOOT=0
-if [[ -f "$ENV_FILE" ]] && grep -q '^HOMELABOS_QUIET_BOOT=1' "$ENV_FILE"; then
-  PREV_QUIET_BOOT=1
+PREV_DEV_VNC=0
+if [[ -f "$ENV_FILE" ]]; then
+  grep -q '^HOMELABOS_QUIET_BOOT=1' "$ENV_FILE" && PREV_QUIET_BOOT=1
+  grep -q '^HOMELABOS_DEV_VNC=1' "$ENV_FILE" && PREV_DEV_VNC=1
 fi
 QUIET_BOOT_VALUE=0
 if [[ "$QUIET_BOOT" -eq 1 || "$PREV_QUIET_BOOT" -eq 1 ]]; then
   QUIET_BOOT_VALUE=1
+fi
+DEV_VNC_VALUE=0
+if [[ "$NO_DEV_VNC" -eq 1 ]]; then
+  DEV_VNC_VALUE=0
+elif [[ "$DEV_VNC" -eq 1 || "$PREV_DEV_VNC" -eq 1 ]]; then
+  DEV_VNC_VALUE=1
 fi
 cat > "$ENV_FILE" <<EOF
 HOMELABOS_DEV=0
@@ -222,6 +235,7 @@ HOMELABOS_HOST=0.0.0.0
 HOMELABOS_PORT=8000
 HOMELABOS_INSTALL_DIR=$INSTALL_DIR
 HOMELABOS_QUIET_BOOT=$QUIET_BOOT_VALUE
+HOMELABOS_DEV_VNC=$DEV_VNC_VALUE
 EOF
 chown "$SERVICE_USER:$SERVICE_USER" "$ENV_FILE"
 chmod 640 "$ENV_FILE"
@@ -351,6 +365,27 @@ if [[ "$QUIET_BOOT_VALUE" -eq 1 ]]; then
   HOMELABOS_INSTALL_DIR="$INSTALL_DIR" "$INSTALL_DIR/scripts/quiet-boot.sh" enable
 fi
 
+install -m 755 "$INSTALL_DIR/scripts/install/dev-vnc.sh" "$INSTALL_DIR/scripts/dev-vnc.sh"
+if [[ "$DEV_VNC_VALUE" -eq 1 ]]; then
+  if [[ "$SKIP_KIOSK" -eq 1 ]]; then
+    echo "WARN: --dev-vnc requires kiosk; skipping VNC setup"
+  else
+    echo "==> Enabling dev VNC..."
+    HOMELABOS_INSTALL_DIR="$INSTALL_DIR" \
+    HOMELABOS_SERVICE_USER="$SERVICE_USER" \
+    HOMELABOS_SERVICE_UID="$SERVICE_UID" \
+    HOMELABOS_SERVICE_HOME="$(getent passwd "$SERVICE_USER" | cut -d: -f6)" \
+    HOMELABOS_LOCAL_IP="$LOCAL_IP" \
+      "$INSTALL_DIR/scripts/dev-vnc.sh" enable
+  fi
+elif [[ "$NO_DEV_VNC" -eq 1 ]]; then
+  echo "==> Disabling dev VNC..."
+  HOMELABOS_INSTALL_DIR="$INSTALL_DIR" \
+  HOMELABOS_SERVICE_USER="$SERVICE_USER" \
+  HOMELABOS_SERVICE_UID="$SERVICE_UID" \
+    "$INSTALL_DIR/scripts/dev-vnc.sh" disable 2>/dev/null || true
+fi
+
 trap - ERR
 
 echo ""
@@ -373,6 +408,17 @@ if [[ "$QUIET_BOOT_VALUE" -eq 0 ]]; then
   echo ""
   echo " Quiet boot (hide splash + boot text):"
   echo "   homelabos-update --quiet-boot && sudo reboot"
+fi
+if [[ "$DEV_VNC_VALUE" -eq 0 ]]; then
+  echo ""
+  echo " Dev VNC (mirror kiosk display for development):"
+  echo "   homelabos-update --dev-vnc"
+fi
+if [[ "$DEV_VNC_VALUE" -eq 1 && -f "$INSTALL_DIR/data/dev-vnc.password" ]]; then
+  echo ""
+  echo " Dev VNC     : ${LOCAL_IP}:5900  user: homelabos"
+  echo " Password    : $(tr -d '\n' < "$INSTALL_DIR/data/dev-vnc.password")"
+  echo "               (saved in $INSTALL_DIR/data/dev-vnc.password)"
 fi
 echo ""
 echo " Re-run / update:"

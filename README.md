@@ -23,6 +23,22 @@ sudo reboot
 ```bash
 homelabos-update
 homelabos-update --quiet-boot
+homelabos-update --dev-vnc      # mirror kiosk display via VNC (development)
+homelabos-update --no-dev-vnc   # remove VNC
+```
+
+## Dev VNC
+
+Mirrors the exact Cage/Chromium kiosk output using **wayvnc** (Wayland-native).
+
+```bash
+homelabos-update --dev-vnc
+```
+
+Connect with TigerVNC or RealVNC Viewer to `<pi-ip>:5900`. Password is shown at install time and stored in `/opt/homelabos/data/dev-vnc.password`.
+
+```bash
+sudo /opt/homelabos/scripts/dev-vnc.sh status
 ```
 
 ## Development (local machine)

@@ -33,7 +33,10 @@ Updates:
 
 ```bash
 homelabos-update
+homelabos-update --dev-vnc
 ```
+
+Dev VNC status: `sudo /opt/homelabos/scripts/dev-vnc.sh status`
 
 The installer detects the user who ran `sudo` and installs to `/opt/homelabos`.
 

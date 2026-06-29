@@ -3,6 +3,7 @@
 #
 #   homelabos-update
 #   homelabos-update --quiet-boot
+#   homelabos-update --dev-vnc
 set -euo pipefail
 
 INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/Matff4/HomelabOS/refs/heads/master/install.sh"
