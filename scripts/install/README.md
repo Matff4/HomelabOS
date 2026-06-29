@@ -53,7 +53,7 @@ Mirrors the live Cage kiosk display — same pixels as the HDMI panel.
 homelabos-update --dev-vnc
 ```
 
-Connect: `<pi-ip>:5900` with TigerVNC / RealVNC Viewer. User `homelabos`, password in `/opt/homelabos/data/dev-vnc.password`.
+Connect: `<pi-ip>:5900` — no VNC login (dev mode). Session runs as your Unix user.
 
 ```bash
 sudo /opt/homelabos/scripts/dev-vnc.sh status

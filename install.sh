@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # Bump when debugging install issues — printed at runtime so you can verify what ran.
-INSTALLER_REV="2025-06-29-5"
+INSTALLER_REV="2025-06-29-6"
 INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/Matff4/HomelabOS/refs/heads/master/install.sh"
 
 INSTALL_DIR="/opt/homelabos"
@@ -361,7 +361,6 @@ rm -f /etc/sudoers.d/homelabos
 # ── Quiet boot (optional) ─────────────────────────────────────────────────────
 install -m 755 "$INSTALL_DIR/scripts/install/quiet-boot.sh" "$INSTALL_DIR/scripts/quiet-boot.sh"
 if [[ "$QUIET_BOOT_VALUE" -eq 1 ]]; then
-  echo "==> Enabling quiet boot..."
   HOMELABOS_INSTALL_DIR="$INSTALL_DIR" "$INSTALL_DIR/scripts/quiet-boot.sh" enable
 fi
 
@@ -371,7 +370,6 @@ if [[ "$DEV_VNC_VALUE" -eq 1 ]]; then
     echo "WARN: --dev-vnc requires kiosk; skipping VNC setup"
   else
     echo "==> Enabling dev VNC..."
-    HOMELABOS_INSTALL_DIR="$INSTALL_DIR" \
     HOMELABOS_SERVICE_USER="$SERVICE_USER" \
     HOMELABOS_SERVICE_UID="$SERVICE_UID" \
     HOMELABOS_SERVICE_HOME="$(getent passwd "$SERVICE_USER" | cut -d: -f6)" \
@@ -414,11 +412,10 @@ if [[ "$DEV_VNC_VALUE" -eq 0 ]]; then
   echo " Dev VNC (mirror kiosk display for development):"
   echo "   homelabos-update --dev-vnc"
 fi
-if [[ "$DEV_VNC_VALUE" -eq 1 && -f "$INSTALL_DIR/data/dev-vnc.password" ]]; then
+if [[ "$DEV_VNC_VALUE" -eq 1 && "$SKIP_KIOSK" -eq 0 ]]; then
   echo ""
-  echo " Dev VNC     : ${LOCAL_IP}:5900  user: homelabos"
-  echo " Password    : $(tr -d '\n' < "$INSTALL_DIR/data/dev-vnc.password")"
-  echo "               (saved in $INSTALL_DIR/data/dev-vnc.password)"
+  echo " Dev VNC     : ${LOCAL_IP}:5900  (no login, dev/LAN only)"
+  echo " Session as  : ${SERVICE_USER}"
 fi
 echo ""
 echo " Re-run / update:"
