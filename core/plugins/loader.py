@@ -1,0 +1,131 @@
+"""Plugin discovery and backend mounting."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import logging
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
+
+from core.models.manifest import PluginManifest
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class LoadedPlugin:
+    manifest: PluginManifest
+    directory: Path
+    backend_loaded: bool = False
+
+
+class PluginManager:
+    def __init__(self, apps_dir: Path) -> None:
+        self.apps_dir = apps_dir
+        self.plugins: dict[str, LoadedPlugin] = {}
+        self._mounted_static: set[str] = set()
+
+    def discover(self) -> list[LoadedPlugin]:
+        self.plugins.clear()
+        if not self.apps_dir.is_dir():
+            return []
+
+        loaded: list[LoadedPlugin] = []
+        for entry in sorted(self.apps_dir.iterdir()):
+            if not entry.is_dir():
+                continue
+            manifest_path = entry / "manifest.json"
+            if not manifest_path.is_file():
+                continue
+            try:
+                raw = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest = PluginManifest.model_validate(raw)
+            except (json.JSONDecodeError, ValidationError) as exc:
+                logger.warning("Skipping plugin %s: invalid manifest (%s)", entry.name, exc)
+                continue
+            if manifest.id != entry.name:
+                logger.warning(
+                    "Plugin folder %s id mismatch (manifest.id=%s)", entry.name, manifest.id
+                )
+            plugin = LoadedPlugin(manifest=manifest, directory=entry, backend_loaded=False)
+            self.plugins[manifest.id] = plugin
+            loaded.append(plugin)
+        return loaded
+
+    def mount(self, app: FastAPI) -> None:
+        for plugin in self.plugins.values():
+            static_mount = f"/apps/{plugin.manifest.id}"
+            if plugin.manifest.id not in self._mounted_static:
+                app.mount(
+                    static_mount,
+                    StaticFiles(directory=plugin.directory),
+                    name=f"plugin_static_{plugin.manifest.id}",
+                )
+                self._mounted_static.add(plugin.manifest.id)
+
+            backend_path = plugin.directory / (plugin.manifest.backend or "main.py")
+            if not plugin.manifest.backend and not backend_path.is_file():
+                continue
+            if not backend_path.is_file():
+                logger.warning("[%s] backend file missing: %s", plugin.manifest.id, backend_path)
+                continue
+
+            module_name = f"homelabos.plugins.{plugin.manifest.id}"
+            spec = importlib.util.spec_from_file_location(module_name, backend_path)
+            if spec is None or spec.loader is None:
+                continue
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            try:
+                spec.loader.exec_module(module)
+            except Exception as exc:
+                logger.exception("[%s] backend load failed: %s", plugin.manifest.id, exc)
+                continue
+
+            router = getattr(module, "router", None)
+            if router is None:
+                continue
+            prefix = f"/api/plugins/{plugin.manifest.id}"
+            app.include_router(router, prefix=prefix)
+            plugin.backend_loaded = True
+            logger.info("[%s] backend mounted at %s", plugin.manifest.id, prefix)
+
+    def summaries(self) -> list[dict]:
+        return [
+            {
+                "id": plugin.manifest.id,
+                "name": plugin.manifest.name,
+                "version": plugin.manifest.version,
+                "enabled": True,
+            }
+            for plugin in self.plugins.values()
+        ]
+
+    def health(self, plugin_id: str) -> dict:
+        plugin = self.plugins.get(plugin_id)
+        if plugin is None:
+            raise HTTPException(status_code=404, detail="Plugin not found")
+        if plugin.manifest.backend and not plugin.backend_loaded:
+            return {"id": plugin_id, "status": "degraded", "message": "Backend failed to load"}
+        return {"id": plugin_id, "status": "ok", "message": None}
+
+
+_manager: PluginManager | None = None
+
+
+def get_plugin_manager(apps_dir: Path) -> PluginManager:
+    global _manager
+    if _manager is None:
+        _manager = PluginManager(apps_dir)
+    return _manager
+
+
+def reset_plugin_manager() -> None:
+    global _manager
+    _manager = None

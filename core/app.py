@@ -1,3 +1,6 @@
+"""HomelabOS FastAPI application."""
+
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -7,7 +10,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from core import __version__
+from core.events.bus import get_bus, reset_bus
+from core.hal import get_hal, reset_hal
 from core.models.api import HealthResponse
+from core.plugins.loader import get_plugin_manager, reset_plugin_manager
+from core.routes import api_router
+from core.services.tasks import run_publishers
 from core.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -16,9 +24,24 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings.data_dir.mkdir(parents=True, exist_ok=True)
-    logger.info("HomelabOS v%s starting (dev=%s mock_hal=%s)", __version__, settings.dev, settings.mock_hal)
-    yield
-    logger.info("HomelabOS shutting down")
+    get_hal(mock=settings.mock_hal)
+    bus = get_bus()
+    bus._running = True
+    logger.info(
+        "HomelabOS v%s starting (dev=%s mock_hal=%s)",
+        __version__,
+        settings.dev,
+        settings.mock_hal,
+    )
+    publisher = asyncio.create_task(run_publishers(bus), name="homelabos-publishers")
+    try:
+        yield
+    finally:
+        publisher.cancel()
+        await asyncio.gather(publisher, return_exceptions=True)
+        bus.stop()
+        get_hal(mock=settings.mock_hal).cleanup_all()
+        logger.info("HomelabOS shutting down")
 
 
 def create_app() -> FastAPI:
@@ -33,9 +56,15 @@ def create_app() -> FastAPI:
             time=datetime.now(UTC),
         ).model_dump(mode="json")
 
-    # Static shell (built by Vite) or placeholder
+    app.include_router(api_router)
+
+    assert settings.apps_dir
+    plugin_manager = get_plugin_manager(settings.apps_dir)
+    plugin_manager.discover()
+    plugin_manager.mount(app)
+
     dist = settings.shell_dist_dir
-    if dist.is_dir() and (dist / "index.html").is_file():
+    if dist and dist.is_dir() and (dist / "index.html").is_file():
         app.mount("/static", StaticFiles(directory=dist), name="static")
 
         @app.get("/")
@@ -53,3 +82,10 @@ def create_app() -> FastAPI:
             )
 
     return app
+
+
+def reset_runtime() -> None:
+    """Reset process-global singletons (tests)."""
+    reset_bus()
+    reset_hal()
+    reset_plugin_manager()

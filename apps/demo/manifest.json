@@ -1,0 +1,18 @@
+{
+  "id": "demo",
+  "name": "Demo Plugin",
+  "version": "1.0.0",
+  "api_version": 1,
+  "backend": "main.py",
+  "components": [
+    {
+      "id": "demo_widget",
+      "type": "widget",
+      "name": "Demo Widget",
+      "icon": "widgets",
+      "entry": "src/widget.html",
+      "size": { "w": 2, "h": 2 },
+      "min_size": { "w": 2, "h": 2 }
+    }
+  ]
+}

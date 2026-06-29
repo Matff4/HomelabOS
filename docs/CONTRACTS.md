@@ -45,7 +45,7 @@ When a data file is missing, core serves model defaults (`SystemConfig()`, `[]` 
 
 Base URL on device: `http://<pi-ip>:8000`
 
-### Implemented (Phase 0)
+### Implemented (Phase 0–1)
 
 #### `GET /api/health`
 
@@ -59,7 +59,37 @@ Base URL on device: `http://<pi-ip>:8000`
 }
 ```
 
-### Planned (Phase 1+) — shapes frozen here
+#### `GET /api/system/stats` → `SystemStats`
+
+#### `GET /api/system/display` → `DisplayInfo`
+
+#### `POST /api/system/power` — body `PowerRequest`
+
+#### `GET /api/config` / `PUT /api/config` → `SystemConfig`
+
+#### `GET /api/layout` / `PUT /api/layout` → `LayoutItem[]`
+
+#### `PATCH /api/layout/widget` — body `WidgetConfigPatch`
+
+#### `GET /api/events` — Server-Sent Events (see envelope below)
+
+#### `GET /api/plugins` → `PluginSummary[]`
+
+#### `GET /api/plugins/{id}/health` → `PluginHealth`
+
+#### `/api/plugins/{id}/*` — plugin backend routes
+
+Plugin static assets: `/apps/{plugin_id}/…` (e.g. widget HTML).
+
+#### Not implemented yet (Phase 5)
+
+- `POST /api/plugins/install`
+- `POST /api/plugins/{id}/update`
+- `DELETE /api/plugins/{id}`
+
+(return HTTP 501 until marketplace ships)
+
+### Reference — frozen shapes
 
 #### `GET /api/system/stats` → `SystemStats`
 
@@ -251,3 +281,12 @@ This is **not** a separate product mode — the same contracts apply; HAL is moc
 - [x] Frozen SSE envelope + channel names
 - [x] Frozen postMessage protocol
 - [x] Frozen SDK TypeScript surface
+
+## Phase 1 checklist
+
+- [x] JSON store + config/layout routes
+- [x] System stats/display/power routes
+- [x] SSE event bus + background publishers
+- [x] Plugin loader + `apps/demo/`
+- [x] HAL mock (`HOMELABOS_DEV=1`) + gpiozero on Pi
+- [x] pytest (`tests/test_api.py`, `tests/test_hal.py`)

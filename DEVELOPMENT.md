@@ -25,6 +25,15 @@ Or: `python scripts/dev.py` (sets `HOMELABOS_DEV=1` and creates `.venv` if missi
 
 Open http://localhost:8000
 
+Quick API checks:
+
+```bash
+curl -s http://localhost:8000/api/health
+curl -s http://localhost:8000/api/system/stats
+curl -s http://localhost:8000/api/plugins
+pytest
+```
+
 ## JSON schemas
 
 Pydantic models in `core/models/` are the source of truth. Regenerate after model changes:

@@ -34,13 +34,13 @@ homelabos/
 - [x] Minimal bootable core (`GET /api/health` + shell placeholder)
 
 ### Phase 1 — Core (~1 week)
-- FastAPI app factory + lifespan
-- JSON store (atomic write, Pydantic validation)
-- Plugin loader (manifest scan, lifespan routers)
-- Event bus (SSE, heartbeat, `system.stats` channel)
-- HAL (gpiozero + mock for `HOMELABOS_DEV=1`)
-- Routes: health, system, config, layout, events, plugins
-- pytest from day one
+- [x] FastAPI app factory + lifespan
+- [x] JSON store (atomic write, Pydantic validation)
+- [x] Plugin loader (manifest scan, lifespan routers)
+- [x] Event bus (SSE, heartbeat, `system.stats` channel)
+- [x] HAL (gpiozero + mock for `HOMELABOS_DEV=1`)
+- [x] Routes: health, system, config, layout, events, plugins
+- [x] pytest from day one
 
 ### Phase 2 — Shell (~1–2 weeks)
 - Vite + TypeScript
@@ -113,7 +113,7 @@ Frozen TypeScript types: `sdk/src/types.ts`. Full implementation in Phase 3.
 4. JSON schemas (generated from Pydantic) ✓
 5. Dev mode on laptop (`HOMELABOS_DEV=1`) ✓
 
-**Next:** Phase 1 — core platform (JSON store, routes, SSE, plugin loader).
+**Next:** Phase 2 — shell UI (GridStack, SSE relay, taskbar).
 
 ## Performance Goals
 
