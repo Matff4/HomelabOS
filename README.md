@@ -1,16 +1,18 @@
 # HomelabOS
 
-Kiosk dashboard platform for Raspberry Pi.
+Touchscreen kiosk for Raspberry Pi — monitor your homelab from a dedicated panel.
 
-## Install on fresh Raspberry Pi OS (64-bit)
+## Install on fresh Raspberry Pi OS Lite (64-bit)
 
-Flash SD card with [Raspberry Pi Imager](https://www.raspberrypi.com/software/) — Then SSH in or open a terminal:
+Flash SD card, then SSH in:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Matff4/HomelabOS/refs/heads/master/install.sh | sudo bash
 ```
 
-That's it. The script will:
+Safe to re-run if the connection drops mid-install.
+
+The script will:
 
 - Install system dependencies (Python, Chromium, Cage, Node.js)
 - Clone this repo to `/opt/homelabos`
@@ -43,4 +45,4 @@ sudo bash install.sh              # copies to /opt/homelabos
 sudo bash install.sh --in-place   # run directly from clone
 ```
 
-See [ROADMAP.md](ROADMAP.md)
+See [ROADMAP.md](ROADMAP.md).

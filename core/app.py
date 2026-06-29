@@ -47,7 +47,7 @@ def create_app() -> FastAPI:
         async def placeholder():
             return JSONResponse(
                 {
-                    "message": "HomelabOS v2 core is running. Build the shell: cd shell && npm install && npm run build",
+                    "message": "HomelabOS core is running. Build the shell: cd shell && npm install && npm run build",
                     "health": "/api/health",
                 }
             )

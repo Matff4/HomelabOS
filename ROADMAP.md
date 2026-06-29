@@ -1,11 +1,10 @@
-# HomelabOS v2 — Roadmap
-
-> v1 (PoC) lives in `old/` for reference only. No backward compatibility.
+# HomelabOS — Roadmap
 
 ## Vision
 
-Kiosk-first dashboard runtime for embedded Linux (Raspberry Pi + Chromium + Wayland).
-Plugins are self-contained bundles. Core is the platform. JSON on disk for persistence.
+A kiosk dashboard on Raspberry Pi for **monitoring your homelab** — Proxmox nodes, services, sensors, and anything else via plugins.
+
+Runs on embedded Linux (Pi + Chromium + Cage). Plugins are self-contained bundles. Core is the platform. JSON on disk for persistence.
 
 ## Repository Layout
 
@@ -18,7 +17,6 @@ homelabos/
 ├── schemas/              # JSON Schema for manifest, layout, config
 ├── data/                 # Runtime JSON (gitignored contents)
 ├── scripts/              # install.sh, dev helpers, systemd templates
-├── old/                  # v1 PoC (reference only)
 └── install.sh            # Fresh Raspberry Pi OS setup
 ```
 
@@ -51,12 +49,10 @@ homelabos/
 - `scripts/create-plugin.py` scaffold
 - Plugin author docs
 
-### Phase 4 — Rewrite Plugins (~1 week)
-| v1 reference | v2 plugin |
-|--------------|-----------|
-| `old/backend/apps/pve-integration/` | `apps/pve/` |
-| `old/backend/apps/active-cooling/` | `apps/fan/` |
-| demo/power widgets | examples or drop |
+### Phase 4 — Plugins (~1 week)
+- `apps/pve/` — Proxmox monitoring
+- `apps/fan/` — GPIO fan control
+- Example widgets as needed
 
 ### Phase 5 — Plugin Platform (~1 week)
 - `data/registry.json` installed metadata
@@ -116,7 +112,7 @@ HomelabOS.settings          // widget settings schema flow
 4. JSON schemas
 5. Dev mode on laptop (`HOMELABOS_DEV=1`)
 
-## v2 Performance Goals (fix v1 pane scroll lag)
+## Performance Goals
 
 - Replace CSS `scroll-behavior: smooth` pane carousel with `transform`/`translateX`
 - One SSE connection in shell (not per iframe)

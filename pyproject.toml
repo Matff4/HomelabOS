@@ -1,7 +1,7 @@
 [project]
 name = "homelabos"
-version = "2.0.0"
-description = "Kiosk dashboard platform for homelab devices"
+version = "1.0.0"
+description = "Touchscreen kiosk for Raspberry Pi — monitor your homelab"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",
