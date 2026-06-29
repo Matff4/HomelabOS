@@ -35,7 +35,7 @@ Mirrors the exact Cage/Chromium kiosk output using **wayvnc** (Wayland-native).
 homelabos-update --dev-vnc
 ```
 
-Connect with TigerVNC or RealVNC Viewer to `<pi-ip>:5900` — no VNC login in dev mode (trusted LAN). The Wayland session is owned by your Unix user (`matff`).
+Connect with TigerVNC or RealVNC Viewer to `<pi-ip>:5900` — no VNC login in dev mode (trusted LAN). The Wayland session is owned by your Unix user (eg `pi`).
 
 ```bash
 sudo /opt/homelabos/scripts/dev-vnc.sh status
