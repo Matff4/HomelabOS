@@ -1,0 +1,13 @@
+{
+  "name": "homelabos-sdk",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --format=iife --global-name=HomelabOS --outfile=../shell/dist/sdk/homelabos-sdk.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  }
+}

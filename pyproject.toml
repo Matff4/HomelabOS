@@ -1,0 +1,23 @@
+[project]
+name = "homelabos"
+version = "2.0.0"
+description = "Kiosk dashboard platform for homelab devices"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "psutil>=6.0.0",
+]
+
+[project.optional-dependencies]
+hardware = ["gpiozero>=2.0.0"]
+dev = ["pytest>=8.0.0", "httpx>=0.27.0", "ruff>=0.8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

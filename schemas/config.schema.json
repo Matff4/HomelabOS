@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://homelabos.local/schemas/config.schema.json",
+  "title": "HomelabOS System Config",
+  "type": "object",
+  "properties": {
+    "timeFormat": { "enum": ["12", "24"] },
+    "ramFormat": { "enum": ["percent", "absolute"] },
+    "theme": { "enum": ["dark", "light"] },
+    "barHeight": { "enum": ["small", "medium", "big"] },
+    "widgetBarHeight": { "enum": ["small", "medium", "big"] },
+    "accentColor": { "enum": ["blue", "green", "purple", "red", "orange", "yellow"] },
+    "marketplaceUrl": { "type": "string", "format": "uri" }
+  },
+  "additionalProperties": false
+}

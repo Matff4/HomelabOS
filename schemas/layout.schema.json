@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://homelabos.local/schemas/layout.schema.json",
+  "title": "HomelabOS Dashboard Layout",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["instance_id", "component_id", "x", "y", "w", "h", "pane"],
+    "properties": {
+      "instance_id": { "type": "string" },
+      "component_id": { "type": "string" },
+      "x": { "type": "integer", "minimum": 0 },
+      "y": { "type": "integer", "minimum": 0 },
+      "w": { "type": "integer", "minimum": 1 },
+      "h": { "type": "integer", "minimum": 1 },
+      "pane": { "type": "integer", "minimum": 0 },
+      "config": { "type": "object" }
+    }
+  }
+}
