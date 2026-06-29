@@ -9,15 +9,19 @@
 #
 set -euo pipefail
 
+# Bump when debugging install issues — printed at runtime so you can verify what ran.
+INSTALLER_REV="2025-06-29-2"
 INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/Matff4/HomelabOS/refs/heads/master/install.sh"
 
 INSTALL_DIR="/opt/homelabos"
-REPO_URL="${HOMELABOS_REPO:-https://github.com/Matff4/HomelabOS.git}"
-REPO_BRANCH="${HOMELABOS_BRANCH:-master}"
+REPO_URL="https://github.com/Matff4/HomelabOS.git"
+REPO_BRANCH="master"
+BRANCH_EXPLICIT=0
 
 IN_PLACE=0
 SKIP_KIOSK=0
 SKIP_BUILD=0
+QUIET_BOOT=0
 SERVICE_USER=""
 
 while [[ $# -gt 0 ]]; do
@@ -25,10 +29,11 @@ while [[ $# -gt 0 ]]; do
     --in-place)   IN_PLACE=1 ;;
     --user)       SERVICE_USER="$2"; shift ;;
     --dir)        INSTALL_DIR="$2"; shift ;;
-    --branch)     REPO_BRANCH="$2"; shift ;;
+    --branch)     REPO_BRANCH="$2"; BRANCH_EXPLICIT=1; shift ;;
     --repo)       REPO_URL="$2"; shift ;;
     --skip-kiosk) SKIP_KIOSK=1 ;;
     --skip-build) SKIP_BUILD=1 ;;
+    --quiet-boot) QUIET_BOOT=1 ;;
     -h|--help)
       cat <<EOF
 HomelabOS installer
@@ -41,9 +46,12 @@ Options:
   --in-place      Install from local checkout (developer)
   --skip-kiosk    API only
   --skip-build    Skip npm shell build
-  --branch BR     Git branch (default: master)
+  --quiet-boot    Hide Pi splash and boot text on display (reboot required)
+  --branch BR     Git branch (default: master, remote install only)
 
-Environment: HOMELABOS_REPO, HOMELABOS_BRANCH
+Pass flags through curl: curl ... | sudo bash -s -- --quiet-boot
+
+Note: branch is NOT read from environment variables (avoids stale HOMELABOS_BRANCH=main).
 EOF
       exit 0
       ;;
@@ -80,6 +88,11 @@ if [[ "$is_local_checkout" -eq 1 && "$IN_PLACE" -eq 1 ]]; then
   INSTALL_DIR="$LOCAL_REPO"
 fi
 
+# curl | sudo bash must always clone master unless --branch was passed explicitly
+if [[ "$is_local_checkout" -eq 0 && "$BRANCH_EXPLICIT" -eq 0 ]]; then
+  REPO_BRANCH="master"
+fi
+
 if [[ "${EUID}" -ne 0 ]]; then
   echo "ERROR: Run with sudo:"
   echo "  curl -fsSL $INSTALL_SCRIPT_URL | sudo bash"
@@ -100,10 +113,22 @@ SERVICE_USER="$(detect_service_user)"
 SERVICE_UID="$(id -u "$SERVICE_USER")"
 ARCH="$(uname -m)"
 
-echo "==> HomelabOS installer"
+get_local_ip() {
+  local ip
+  ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}')"
+  if [[ -z "$ip" ]]; then
+    ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  fi
+  echo "${ip:-127.0.0.1}"
+}
+
+LOCAL_IP="$(get_local_ip)"
+
+echo "==> HomelabOS installer (rev $INSTALLER_REV)"
 echo "    branch : $REPO_BRANCH"
 echo "    arch   : $ARCH"
 echo "    user   : $SERVICE_USER (uid $SERVICE_UID)"
+echo "    ip     : $LOCAL_IP"
 echo "    target : $INSTALL_DIR"
 echo ""
 echo "    Tip: if SSH drops, re-run the same install command."
@@ -183,11 +208,20 @@ fi
 # ── Environment + systemd (API) — before slow npm step ────────────────────────
 echo "==> [4/7] homelabos.service..."
 ENV_FILE="$INSTALL_DIR/.env"
+PREV_QUIET_BOOT=0
+if [[ -f "$ENV_FILE" ]] && grep -q '^HOMELABOS_QUIET_BOOT=1' "$ENV_FILE"; then
+  PREV_QUIET_BOOT=1
+fi
+QUIET_BOOT_VALUE=0
+if [[ "$QUIET_BOOT" -eq 1 || "$PREV_QUIET_BOOT" -eq 1 ]]; then
+  QUIET_BOOT_VALUE=1
+fi
 cat > "$ENV_FILE" <<EOF
 HOMELABOS_DEV=0
-HOMELABOS_HOST=127.0.0.1
+HOMELABOS_HOST=0.0.0.0
 HOMELABOS_PORT=8000
 HOMELABOS_INSTALL_DIR=$INSTALL_DIR
+HOMELABOS_QUIET_BOOT=$QUIET_BOOT_VALUE
 EOF
 chown "$SERVICE_USER:$SERVICE_USER" "$ENV_FILE"
 chmod 640 "$ENV_FILE"
@@ -311,6 +345,13 @@ $SERVICE_USER ALL=(root) NOPASSWD: /sbin/reboot, /sbin/shutdown, /bin/systemctl 
 EOF
 chmod 440 "$SUDOERS_FILE"
 
+# ── Quiet boot (optional) ─────────────────────────────────────────────────────
+install -m 755 "$INSTALL_DIR/scripts/install/quiet-boot.sh" "$INSTALL_DIR/scripts/quiet-boot.sh"
+if [[ "$QUIET_BOOT_VALUE" -eq 1 ]]; then
+  echo "==> Enabling quiet boot..."
+  HOMELABOS_INSTALL_DIR="$INSTALL_DIR" "$INSTALL_DIR/scripts/quiet-boot.sh" enable
+fi
+
 trap - ERR
 
 echo ""
@@ -320,13 +361,19 @@ echo "════════════════════════�
 echo " Install dir : $INSTALL_DIR"
 echo " Service user: $SERVICE_USER"
 echo " Git branch  : $REPO_BRANCH"
-echo " API         : http://127.0.0.1:8000/api/health"
+echo " API (local) : http://127.0.0.1:8000/api/health"
+echo " API (lan)   : http://${LOCAL_IP}:8000/api/health"
 echo " Shell build : $([[ "$BUILD_OK" -eq 1 ]] && echo OK || echo skipped/failed — re-run install)"
 echo ""
 echo "   systemctl status homelabos"
 if [[ "$SKIP_KIOSK" -eq 0 ]]; then
   echo "   sudo systemctl start homelabos-kiosk"
   echo "   sudo reboot                  # kiosk on tty1 after reboot"
+fi
+if [[ "$QUIET_BOOT_VALUE" -eq 0 ]]; then
+  echo ""
+  echo " Quiet boot (hide splash + boot text):"
+  echo "   sudo $INSTALL_DIR/scripts/quiet-boot.sh enable && sudo reboot"
 fi
 echo ""
 echo " Re-run / update:"

@@ -32,3 +32,15 @@ cage -s -- /opt/homelabos/scripts/kiosk-launch.sh
 ```
 
 Production systemd unit does **not** use `-s`.
+
+## Quiet boot
+
+Hide Pi firmware splash and boot text on the display:
+
+```bash
+sudo /opt/homelabos/scripts/quiet-boot.sh enable && sudo reboot
+sudo /opt/homelabos/scripts/quiet-boot.sh disable && sudo reboot
+sudo /opt/homelabos/scripts/quiet-boot.sh status
+```
+
+During install: `curl ... | sudo bash -s -- --quiet-boot`
