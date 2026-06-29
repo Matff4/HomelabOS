@@ -43,4 +43,4 @@ sudo /opt/homelabos/scripts/quiet-boot.sh disable && sudo reboot
 sudo /opt/homelabos/scripts/quiet-boot.sh status
 ```
 
-During install: `curl ... | sudo bash -s -- --quiet-boot`
+Moves kernel console from `tty1` (kiosk display) to `tty3` so e2fsck/socket lines stay off the panel. Debug boot issues via SSH or Ctrl+Alt+F3.

@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # Bump when debugging install issues — printed at runtime so you can verify what ran.
-INSTALLER_REV="2025-06-29-2"
+INSTALLER_REV="2025-06-29-4"
 INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/Matff4/HomelabOS/refs/heads/master/install.sh"
 
 INSTALL_DIR="/opt/homelabos"
@@ -47,9 +47,9 @@ Options:
   --skip-kiosk    API only
   --skip-build    Skip npm shell build
   --quiet-boot    Hide Pi splash and boot text on display (reboot required)
-  --branch BR     Git branch (default: master, remote install only)
 
-Pass flags through curl: curl ... | sudo bash -s -- --quiet-boot
+Pass flags: homelabos-update --quiet-boot
+  (after first install; or: curl ... | sudo bash -s -- --quiet-boot)
 
 Note: branch is NOT read from environment variables (avoids stale HOMELABOS_BRANCH=main).
 EOF
@@ -336,14 +336,13 @@ else
   echo "==> [6/7] Kiosk skipped (--skip-kiosk)"
 fi
 
-# ── sudoers ───────────────────────────────────────────────────────────────────
+# ── CLI tools ───────────────────────────────────────────────────────────────────
 echo "==> [7/7] Finalizing..."
-SUDOERS_FILE="/etc/sudoers.d/homelabos"
-cat > "$SUDOERS_FILE" <<EOF
-# HomelabOS — power management for $SERVICE_USER
-$SERVICE_USER ALL=(root) NOPASSWD: /sbin/reboot, /sbin/shutdown, /bin/systemctl restart homelabos-kiosk.service
-EOF
-chmod 440 "$SUDOERS_FILE"
+
+install -m 755 "$INSTALL_DIR/scripts/install/homelabos-update.sh" /usr/local/bin/homelabos-update
+
+# Remove legacy passwordless sudo if a previous install created it
+rm -f /etc/sudoers.d/homelabos
 
 # ── Quiet boot (optional) ─────────────────────────────────────────────────────
 install -m 755 "$INSTALL_DIR/scripts/install/quiet-boot.sh" "$INSTALL_DIR/scripts/quiet-boot.sh"
@@ -373,11 +372,11 @@ fi
 if [[ "$QUIET_BOOT_VALUE" -eq 0 ]]; then
   echo ""
   echo " Quiet boot (hide splash + boot text):"
-  echo "   sudo $INSTALL_DIR/scripts/quiet-boot.sh enable && sudo reboot"
+  echo "   homelabos-update --quiet-boot && sudo reboot"
 fi
 echo ""
 echo " Re-run / update:"
-echo "   curl -fsSL $INSTALL_SCRIPT_URL | sudo bash"
+echo "   homelabos-update"
 echo "════════════════════════════════════════════════════════════"
 
 if [[ "$SKIP_KIOSK" -eq 0 ]]; then

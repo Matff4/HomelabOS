@@ -23,10 +23,16 @@ cd shell && npm install && npm run dev
 
 ## Fresh Pi install (production)
 
-One-liner — no git clone required:
+One-liner — first install only:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Matff4/HomelabOS/refs/heads/master/install.sh | sudo bash
+```
+
+Updates:
+
+```bash
+homelabos-update
 ```
 
 The installer detects the user who ran `sudo` and installs to `/opt/homelabos`.
