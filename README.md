@@ -1,4 +1,4 @@
-# HomelabOS v2
+# HomelabOS
 
 Kiosk dashboard platform for Raspberry Pi.
 
@@ -7,7 +7,7 @@ Kiosk dashboard platform for Raspberry Pi.
 Flash SD card with [Raspberry Pi Imager](https://www.raspberrypi.com/software/) — Then SSH in or open a terminal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Matff4/HomelabOS/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Matff4/HomelabOS/refs/heads/master/install.sh | sudo bash
 ```
 
 That's it. The script will:
