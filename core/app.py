@@ -70,6 +70,13 @@ def create_app() -> FastAPI:
         @app.get("/")
         async def index():
             return FileResponse(dist / "index.html")
+
+        @app.get("/favicon.ico", include_in_schema=False)
+        async def favicon():
+            icon = dist / "favicon.ico"
+            if icon.is_file():
+                return FileResponse(icon)
+            return FileResponse(dist / "index.html")
     else:
 
         @app.get("/")

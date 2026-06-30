@@ -1,7 +1,7 @@
 import { GridStack } from 'gridstack';
 import type { ComponentInfo, LayoutItem, SystemConfig } from './types';
 import { accentColor, fetchComponents, saveLayout, shellSSE } from './api';
-import { calculateGridGeometry, GRID_COLS, GRID_ROWS, themeQuery } from './geometry';
+import { calculateGridGeometry, GRID_COLS, GRID_ROWS, widgetQuery } from './geometry';
 
 export class Workspace {
   private grid: GridStack | null = null;
@@ -72,6 +72,7 @@ export class Workspace {
 
     const geo = calculateGridGeometry(this.config);
     gridEl.style.width = `${geo.containerW}px`;
+    gridEl.style.height = `${geo.cellH * GRID_ROWS + geo.gap * (GRID_ROWS + 1)}px`;
 
     this.grid = GridStack.init(
       {
@@ -112,7 +113,7 @@ export class Workspace {
     iframe.className = 'widget-iframe';
     iframe.setAttribute(
       'src',
-      `${component.entry_url}?${themeQuery(this.config)}&instance=${encodeURIComponent(item.instance_id)}`,
+      `${component.entry_url}?${widgetQuery(this.config, item.instance_id)}`,
     );
     iframe.setAttribute('loading', 'lazy');
 
@@ -148,11 +149,17 @@ export class Workspace {
       h: item.h,
     });
 
-    const node = this.grid.engine.nodes.find((n) => n.id === item.instance_id);
-    const slot = node?.el?.querySelector('.grid-stack-item-content');
-    if (slot) {
+    const mountContent = (): void => {
+      const node = this.grid!.engine.nodes.find((n) => n.id === item.instance_id);
+      const slot = node?.el?.querySelector('.grid-stack-item-content');
+      if (!slot) return;
       slot.innerHTML = '';
       slot.appendChild(content);
+    };
+
+    mountContent();
+    if (!content.isConnected) {
+      requestAnimationFrame(mountContent);
     }
   }
 

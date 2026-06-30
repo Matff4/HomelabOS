@@ -23,10 +23,16 @@ const ACCENT_MAP: Record<string, string> = {
 
 const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
 
+function resolveAccent(raw: string | null): string {
+  if (!raw) return ACCENT_MAP.blue;
+  if (raw.startsWith('#')) return raw;
+  return ACCENT_MAP[raw] ?? ACCENT_MAP.blue;
+}
+
 const defaultPlatform: HomelabOSPlatform = {
   kiosk: params?.get('kiosk') === 'true',
   theme: params?.get('theme') === 'light' ? 'light' : 'dark',
-  accent: params?.get('accent') || ACCENT_MAP.blue,
+  accent: resolveAccent(params?.get('accent')),
 };
 
 let instanceId: string | null = params?.get('instance') || null;
@@ -49,7 +55,10 @@ function handleParentMessage(event: MessageEvent): void {
       break;
     }
     case 'OS_THEME_UPDATE':
-      document.documentElement.style.setProperty('--accent', message.accent || defaultPlatform.accent);
+      document.documentElement.style.setProperty(
+        '--accent',
+        message.accent || defaultPlatform.accent,
+      );
       document.documentElement.style.colorScheme = message.theme || defaultPlatform.theme;
       break;
     case 'WIDGET_CONFIG':
@@ -62,11 +71,6 @@ function handleParentMessage(event: MessageEvent): void {
     default:
       break;
   }
-}
-
-if (typeof window !== 'undefined' && window.parent !== window) {
-  window.addEventListener('message', handleParentMessage);
-  window.parent.postMessage({ type: 'PLUGIN_READY', height: document.body.scrollHeight || 100 }, '*');
 }
 
 export const HomelabOS: HomelabOSStatic = {
@@ -107,3 +111,21 @@ declare global {
 if (typeof window !== 'undefined') {
   window.HomelabOS = HomelabOS;
 }
+
+function sendReady(): void {
+  if (window.parent === window) return;
+  const height = document.body?.scrollHeight ?? document.documentElement?.scrollHeight ?? 100;
+  window.parent.postMessage({ type: 'PLUGIN_READY', height }, '*');
+}
+
+function initIframeBridge(): void {
+  if (typeof window === 'undefined' || window.parent === window) return;
+  window.addEventListener('message', handleParentMessage);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', sendReady);
+  } else {
+    sendReady();
+  }
+}
+
+initIframeBridge();

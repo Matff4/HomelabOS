@@ -1,5 +1,4 @@
 import type { SystemConfig, SystemStats } from './types';
-import { accentColor } from './api';
 
 const BAR_HEIGHT: Record<string, number> = { small: 36, medium: 48, big: 64 };
 export const GRID_COLS = 12;
@@ -15,11 +14,21 @@ export function calculateGridGeometry(config: SystemConfig) {
   const screenW = window.innerWidth || 1424;
   const availableH = screenH - tbHeight;
   const gap = 5;
-  const maxCellH = Math.floor((availableH - 3 * gap) / GRID_ROWS);
-  const maxCellW = Math.floor((screenW - (GRID_COLS + 1) * gap) / GRID_COLS);
-  const cellH = Math.max(24, Math.min(maxCellH, maxCellW));
-  const containerW = GRID_COLS * cellH + (GRID_COLS + 1) * gap;
+  const containerW = screenW - gap * 2;
+  const maxCellH = Math.floor((availableH - gap * (GRID_ROWS + 1)) / GRID_ROWS);
+  const maxCellW = Math.floor((containerW - gap * (GRID_COLS + 1)) / GRID_COLS);
+  const cellH = Math.max(20, Math.min(maxCellH, maxCellW));
   return { cellH, gap, containerW, tbHeight };
+}
+
+export function widgetQuery(config: SystemConfig, instanceId: string): string {
+  const params = new URLSearchParams({
+    kiosk: 'true',
+    theme: config.theme,
+    accent: config.accentColor,
+    instance: instanceId,
+  });
+  return params.toString();
 }
 
 export function formatStats(stats: SystemStats, config: SystemConfig): { cpu: string; ram: string } {
@@ -41,8 +50,4 @@ export function formatClock(config: SystemConfig): string {
       ? { hour: 'numeric', minute: '2-digit', hour12: true }
       : { hour: '2-digit', minute: '2-digit', hour12: false };
   return new Date().toLocaleTimeString([], opts);
-}
-
-export function themeQuery(config: SystemConfig): string {
-  return `kiosk=true&theme=${config.theme}&accent=${encodeURIComponent(accentColor(config))}`;
 }
