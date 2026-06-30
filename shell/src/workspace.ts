@@ -193,7 +193,7 @@ export class Workspace {
         margin: spec.gap,
         minRow: spec.rows,
         maxRow: spec.rows,
-        float: false,
+        float: true,
         staticGrid: !this.editMode,
         animate: false,
         disableOneColumnMode: true,

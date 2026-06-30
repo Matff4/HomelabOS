@@ -14,6 +14,7 @@
       color: var(--text);
     }
     body { padding: 8px 10px; }
+    body[data-kiosk="true"] h2 { display: none; }
     h2 { margin: 0 0 6px; font-size: 0.95rem; color: var(--accent); }
     .stat { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.8rem; line-height: 1.4; }
   </style>
@@ -34,6 +35,9 @@
       function boot() {
         var titleEl = document.getElementById('title');
         var cpuEl = document.getElementById('cpu');
+        if (new URLSearchParams(location.search).get('kiosk') === 'true') {
+          document.body.dataset.kiosk = 'true';
+        }
         var sdk = api();
         if (!sdk) {
           cpuEl.textContent = 'SDK failed to load';

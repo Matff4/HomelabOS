@@ -1,19 +1,40 @@
 :root {
   color-scheme: dark;
-  --bg: #11111b;
-  --surface: #1e1e2e;
-  --text: #cdd6f4;
-  --muted: #a6adc8;
   --accent: #89b4fa;
-  --border: rgba(137, 180, 250, 0.35);
-  --tb-gap: 10px;
+  --tb-gap: 15px;
   --tb-h: 48px;
   --vp-h: 100dvh;
   --vp-w: 100vw;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+body.theme-dark {
+  color-scheme: dark;
+  --bg: #1e1e2e;
+  --taskbar-bg: rgba(24, 24, 37, 0.85);
+  --surface: #313244;
+  --widget-header: #45475a;
+  --text: #cdd6f4;
+  --muted: #a6adc8;
+  --modal-bg: rgba(30, 30, 46, 0.95);
+  --border: rgba(255, 255, 255, 0.05);
+}
+
+body.theme-light {
+  color-scheme: light;
+  --bg: #eff1f5;
+  --taskbar-bg: rgba(230, 233, 241, 0.85);
+  --surface: #e6e9f0;
+  --widget-header: #dce0e8;
+  --text: #4c4f69;
+  --muted: #6c6f85;
+  --modal-bg: rgba(239, 241, 245, 0.95);
+  --border: rgba(0, 0, 0, 0.05);
 }
 
 html,
@@ -25,7 +46,7 @@ body {
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 body {
@@ -34,16 +55,8 @@ body {
 }
 
 body.bar-small { --tb-h: 36px; }
+body.bar-medium { --tb-h: 48px; }
 body.bar-big { --tb-h: 64px; }
-
-body.theme-light {
-  color-scheme: light;
-  --bg: #dce0e8;
-  --surface: #eff1f5;
-  --text: #4c4f69;
-  --muted: #6c6f85;
-  --border: rgba(76, 79, 105, 0.25);
-}
 
 body.booting .workspace-viewport {
   visibility: hidden;
@@ -65,81 +78,169 @@ body.booting .workspace-viewport {
   z-index: 100;
 }
 
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Taskbar — matches legacy v1 */
 .top-bar {
+  --tb-title-size: 24px;
+  --tb-badge-text: 15px;
+  --tb-badge-icon: 20px;
+  --tb-btn-icon: 26px;
+  --tb-btn-pad: 8px;
+  --tb-clock-size: 24px;
   flex: 0 0 var(--tb-h);
   z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--tb-gap);
   height: var(--tb-h);
-  padding: 0 14px;
-  background: var(--surface);
-  border-bottom: 2px solid var(--accent);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  padding: 0 20px;
+  background: var(--taskbar-bg);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-.top-bar.size-small { font-size: 0.85rem; }
-.top-bar.size-big { font-size: 1.05rem; }
+.top-bar.size-small {
+  --tb-title-size: 18px;
+  --tb-badge-text: 13px;
+  --tb-badge-icon: 16px;
+  --tb-btn-icon: 22px;
+  --tb-btn-pad: 4px;
+  --tb-gap: 10px;
+  --tb-clock-size: 18px;
+}
 
-.taskbar-left,
-.taskbar-right {
+.top-bar.size-big {
+  --tb-title-size: 28px;
+  --tb-badge-text: 18px;
+  --tb-badge-icon: 24px;
+  --tb-btn-icon: 32px;
+  --tb-btn-pad: 12px;
+  --tb-gap: 25px;
+  --tb-clock-size: 28px;
+}
+
+.taskbar-section {
   display: flex;
   align-items: center;
   gap: var(--tb-gap);
   min-width: 0;
+  height: 100%;
+}
+
+.stat-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.controls-container {
+  display: flex;
+  align-items: center;
 }
 
 .os-title {
-  font-weight: 800;
-  font-size: 1.05rem;
+  font-weight: 600;
+  font-size: var(--tb-title-size);
   color: var(--accent);
   white-space: nowrap;
-  letter-spacing: 0.02em;
 }
 
 .sse-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #f38ba8;
   flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .sse-dot.connected {
   background: #a6e3a1;
 }
 
-.stat-badge,
-.clock {
-  font-variant-numeric: tabular-nums;
+.stat-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--tb-badge-text);
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: 20px;
   white-space: nowrap;
+}
+
+.stat-badge span:last-child {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
   color: var(--text);
-  font-size: 0.95rem;
+}
+
+.stat-badge .material-symbols-rounded {
+  font-size: var(--tb-badge-icon);
 }
 
 .taskbar-btn {
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
+  background: none;
+  border: none;
   color: var(--text);
-  border-radius: 8px;
-  padding: 4px 12px;
   cursor: pointer;
+  padding: var(--tb-btn-pad);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.taskbar-btn .material-symbols-rounded {
+  font-size: var(--tb-btn-icon);
+}
+
+.taskbar-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .taskbar-btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--accent);
+  color: #11111b;
 }
 
-.edit-only {
-  display: none;
+.edit-only-btn {
+  display: none !important;
 }
 
-body.edit-mode .edit-only {
-  display: inline-flex;
+body.edit-mode .edit-only-btn {
+  display: inline-flex !important;
 }
 
+.clock {
+  font-weight: 600;
+  font-size: var(--tb-clock-size);
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Workspace */
 .workspace-viewport {
   flex: 1 1 auto;
   min-height: 0;
@@ -152,54 +253,6 @@ body.edit-mode .edit-only {
   height: 100%;
 }
 
-.widget-stage {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px;
-}
-
-.widget-panel {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-}
-
-.widget-header {
-  flex: 0 0 auto;
-  padding: 6px 10px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--accent);
-  border-bottom: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.15);
-}
-
-.widget-iframe {
-  flex: 1 1 auto;
-  width: 100%;
-  min-height: 120px;
-  border: 0;
-  background: var(--bg);
-}
-
-.widget-empty {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  font-size: 1rem;
-}
-
-/* GridStack workspace */
 .grid-stage {
   width: 100%;
   height: 100%;
@@ -219,7 +272,7 @@ body.edit-mode .edit-only {
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
 
 body.edit-mode .grid-stack-item-content {
@@ -233,95 +286,195 @@ body.edit-mode .grid-stack-item-content {
   min-height: 0;
 }
 
-.widget-card .widget-iframe {
-  flex: 1;
-  min-height: 0;
+.widget-header {
+  display: none;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  background: var(--widget-header);
 }
 
-/* Modals */
+body.edit-mode .widget-header {
+  display: block;
+}
+
+.widget-card .widget-iframe {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: var(--bg);
+}
+
+.widget-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+/* Modals — viewport-aware for ultrawide / short panels */
 #modal-root {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 4000;
+}
+
+#modal-root[hidden] {
+  display: none !important;
 }
 
 .modal-backdrop {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  overflow: auto;
 }
 
 .modal-card {
   width: min(420px, 100%);
-  padding: 20px;
-  border-radius: 14px;
+  max-height: min(calc(var(--vp-h, 100vh) - 16px), 90vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16px;
   border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  background: var(--modal-bg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .modal-card.modal-wide {
-  width: min(520px, 100%);
+  width: min(720px, 100%);
 }
 
-.modal-card h2 {
-  margin: 0 0 12px;
-  font-size: 1.1rem;
-  color: var(--accent);
+.modal-card.modal-compact {
+  width: min(380px, 100%);
 }
 
-.modal-card p {
-  margin: 0 0 16px;
-  color: var(--muted);
-}
-
-.modal-form {
-  display: grid;
+.modal-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
 }
 
-.modal-form label {
-  display: grid;
-  gap: 4px;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.modal-form select {
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
+.modal-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
   color: var(--text);
 }
 
-.modal-actions {
+.modal-close-btn {
+  flex-shrink: 0;
+}
+
+.modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+
+.modal-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.modal-footer {
+  flex: 0 0 auto;
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  margin-top: 16px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--border);
 }
 
 .modal-actions.vertical {
+  display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
-.taskbar-btn.primary {
-  border-color: var(--accent);
-  color: var(--accent);
+.settings-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px 14px;
 }
 
-.taskbar-btn.danger {
-  border-color: #f38ba8;
-  color: #f38ba8;
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.setting-row select {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.15);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.setting-row select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.modal-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--widget-header);
+  color: var(--text);
+  transition: filter 0.2s;
+}
+
+.modal-btn:hover {
+  filter: brightness(1.1);
+}
+
+.modal-btn.primary {
+  background: var(--accent);
+  color: #11111b;
+}
+
+.modal-btn.danger,
+.modal-btn.sys-btn.danger {
+  background: #f38ba8;
+  color: #11111b;
+}
+
+.modal-btn.sys-btn {
+  width: 100%;
+  text-align: center;
 }
 
 .drawer-list {
   list-style: none;
-  margin: 0 0 12px;
+  margin: 0;
   padding: 0;
   display: grid;
   gap: 6px;
@@ -339,10 +492,47 @@ body.edit-mode .grid-stack-item-content {
 }
 
 .drawer-item:hover {
-  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--accent);
 }
 
 .muted {
   color: var(--muted);
+}
+
+@media (max-height: 480px) {
+  .modal-header {
+    padding: 8px 12px;
+  }
+
+  .modal-header h2 {
+    font-size: 0.9rem;
+  }
+
+  .modal-body {
+    padding: 10px 12px;
+  }
+
+  .modal-footer {
+    padding: 8px 12px;
+  }
+
+  .settings-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .setting-row {
+    font-size: 0.72rem;
+  }
+
+  .setting-row select {
+    padding: 4px 6px;
+    font-size: 0.78rem;
+  }
+
+  .modal-btn {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
 }

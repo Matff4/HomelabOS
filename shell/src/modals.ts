@@ -1,5 +1,6 @@
 import type { ComponentInfo, SystemConfig } from './types';
 import { applyTheme, saveConfig } from './api';
+import { icon, icons } from './icons';
 
 type ConfirmHandler = () => void | Promise<void>;
 
@@ -28,12 +29,12 @@ export class Modals {
   confirm(title: string, message: string, onConfirm: ConfirmHandler, danger = true): void {
     this.open(`
       <div class="modal-backdrop">
-        <div class="modal-card">
-          <h2>${title}</h2>
-          <p>${message}</p>
-          <div class="modal-actions">
-            <button type="button" class="taskbar-btn" data-modal-close>Cancel</button>
-            <button type="button" class="taskbar-btn ${danger ? 'danger' : 'primary'}" id="modal-confirm">Confirm</button>
+        <div class="modal-card modal-compact">
+          <div class="modal-header"><h2>${title}</h2></div>
+          <div class="modal-body"><p>${message}</p></div>
+          <div class="modal-footer">
+            <button type="button" class="modal-btn" data-modal-close>Cancel</button>
+            <button type="button" class="modal-btn ${danger ? 'danger' : 'primary'}" id="modal-confirm">Confirm</button>
           </div>
         </div>
       </div>
@@ -47,51 +48,58 @@ export class Modals {
     this.open(`
       <div class="modal-backdrop">
         <div class="modal-card modal-wide">
-          <h2>Settings</h2>
-          <form id="settings-form" class="modal-form">
-            <label>Theme
-              <select name="theme">
-                <option value="dark" ${config.theme === 'dark' ? 'selected' : ''}>Dark</option>
-                <option value="light" ${config.theme === 'light' ? 'selected' : ''}>Light</option>
-              </select>
-            </label>
-            <label>Accent
-              <select name="accentColor">
-                ${['blue', 'green', 'purple', 'red', 'orange', 'yellow']
-                  .map(
-                    (c) =>
-                      `<option value="${c}" ${config.accentColor === c ? 'selected' : ''}>${c}</option>`,
-                  )
-                  .join('')}
-              </select>
-            </label>
-            <label>Time format
-              <select name="timeFormat">
-                <option value="24" ${config.timeFormat === '24' ? 'selected' : ''}>24h</option>
-                <option value="12" ${config.timeFormat === '12' ? 'selected' : ''}>12h</option>
-              </select>
-            </label>
-            <label>RAM display
-              <select name="ramFormat">
-                <option value="percent" ${config.ramFormat === 'percent' ? 'selected' : ''}>Percent</option>
-                <option value="absolute" ${config.ramFormat === 'absolute' ? 'selected' : ''}>Absolute</option>
-              </select>
-            </label>
-            <label>Taskbar size
-              <select name="barHeight">
-                ${['small', 'medium', 'big']
-                  .map(
-                    (s) =>
-                      `<option value="${s}" ${config.barHeight === s ? 'selected' : ''}>${s}</option>`,
-                  )
-                  .join('')}
-              </select>
-            </label>
-            <div class="modal-actions">
-              <button type="button" class="taskbar-btn" data-modal-close>Cancel</button>
-              <button type="submit" class="taskbar-btn primary">Save</button>
+          <div class="modal-header">
+            <h2>Dashboard Settings</h2>
+            <button type="button" class="taskbar-btn modal-close-btn" data-modal-close title="Close">
+              ${icon(icons.close)}
+            </button>
+          </div>
+          <form id="settings-form" class="modal-body">
+            <div class="settings-form">
+              <label class="setting-row">Theme
+                <select name="theme">
+                  <option value="dark" ${config.theme === 'dark' ? 'selected' : ''}>Dark</option>
+                  <option value="light" ${config.theme === 'light' ? 'selected' : ''}>Light</option>
+                </select>
+              </label>
+              <label class="setting-row">Accent
+                <select name="accentColor">
+                  ${['blue', 'green', 'purple', 'red', 'orange', 'yellow']
+                    .map(
+                      (c) =>
+                        `<option value="${c}" ${config.accentColor === c ? 'selected' : ''}>${c}</option>`,
+                    )
+                    .join('')}
+                </select>
+              </label>
+              <label class="setting-row">Time format
+                <select name="timeFormat">
+                  <option value="24" ${config.timeFormat === '24' ? 'selected' : ''}>24h</option>
+                  <option value="12" ${config.timeFormat === '12' ? 'selected' : ''}>12h</option>
+                </select>
+              </label>
+              <label class="setting-row">RAM display
+                <select name="ramFormat">
+                  <option value="percent" ${config.ramFormat === 'percent' ? 'selected' : ''}>Percent</option>
+                  <option value="absolute" ${config.ramFormat === 'absolute' ? 'selected' : ''}>Absolute</option>
+                </select>
+              </label>
+              <label class="setting-row">Taskbar size
+                <select name="barHeight">
+                  ${['small', 'medium', 'big']
+                    .map(
+                      (s) =>
+                        `<option value="${s}" ${config.barHeight === s ? 'selected' : ''}>${s}</option>`,
+                    )
+                    .join('')}
+                </select>
+              </label>
             </div>
           </form>
+          <div class="modal-footer">
+            <button type="button" class="modal-btn" data-modal-close>Cancel</button>
+            <button type="submit" form="settings-form" class="modal-btn primary">Save</button>
+          </div>
         </div>
       </div>
     `);
@@ -120,13 +128,15 @@ export class Modals {
   openPower(): void {
     this.open(`
       <div class="modal-backdrop">
-        <div class="modal-card">
-          <h2>System</h2>
-          <div class="modal-actions vertical">
-            <button type="button" class="taskbar-btn" data-power="restart-kiosk">Restart kiosk</button>
-            <button type="button" class="taskbar-btn danger" data-power="reboot">Reboot</button>
-            <button type="button" class="taskbar-btn danger" data-power="shutdown">Shutdown</button>
-            <button type="button" class="taskbar-btn" data-modal-close>Cancel</button>
+        <div class="modal-card modal-compact">
+          <div class="modal-header"><h2>Core Management</h2></div>
+          <div class="modal-body modal-actions vertical">
+            <button type="button" class="modal-btn sys-btn" data-power="restart-kiosk">Restart kiosk</button>
+            <button type="button" class="modal-btn sys-btn danger" data-power="reboot">Reboot</button>
+            <button type="button" class="modal-btn sys-btn danger" data-power="shutdown">Shutdown</button>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="modal-btn" data-modal-close>Cancel</button>
           </div>
         </div>
       </div>
@@ -156,17 +166,19 @@ export class Modals {
     this.open(`
       <div class="modal-backdrop">
         <div class="modal-card modal-wide">
-          <h2>Add widget</h2>
-          <ul class="drawer-list">
-            ${widgets
-              .map(
-                (c) =>
-                  `<li><button type="button" class="drawer-item" data-id="${c.id}">${c.name}</button></li>`,
-              )
-              .join('') || '<li class="muted">No widgets available</li>'}
-          </ul>
-          <div class="modal-actions">
-            <button type="button" class="taskbar-btn" data-modal-close>Close</button>
+          <div class="modal-header"><h2>Add widget</h2></div>
+          <div class="modal-body">
+            <ul class="drawer-list">
+              ${widgets
+                .map(
+                  (c) =>
+                    `<li><button type="button" class="drawer-item" data-id="${c.id}">${c.name}</button></li>`,
+                )
+                .join('') || '<li class="muted">No widgets available</li>'}
+            </ul>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="modal-btn" data-modal-close>Close</button>
           </div>
         </div>
       </div>

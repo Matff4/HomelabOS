@@ -1,6 +1,7 @@
 import type { SystemConfig, SystemStats } from './types';
 import { formatClock, formatStats } from './geometry';
 import { shellSSE } from './api';
+import { icon, icons } from './icons';
 
 export class Taskbar {
   private config: SystemConfig;
@@ -19,17 +20,29 @@ export class Taskbar {
   private render(): void {
     this.root.className = `top-bar size-${this.config.barHeight}`;
     this.root.innerHTML = `
-      <div class="taskbar-left">
-        <span class="os-title">HomelabOS</span>
+      <div class="taskbar-section taskbar-left">
+        <span class="os-title">Homelab OS</span>
         <span class="sse-dot" id="sse-dot" title="Event stream"></span>
       </div>
-      <div class="taskbar-right">
-        <div class="stat-badge" id="stat-cpu">CPU --%</div>
-        <div class="stat-badge" id="stat-ram">RAM --</div>
-        <button type="button" class="taskbar-btn edit-only" id="btn-add" title="Add widget">+</button>
-        <button type="button" class="taskbar-btn" id="btn-edit" title="Edit layout">Edit</button>
-        <button type="button" class="taskbar-btn" id="btn-settings" title="Settings">Settings</button>
-        <button type="button" class="taskbar-btn" id="btn-power" title="Power">Power</button>
+      <div class="taskbar-section taskbar-right">
+        <div class="stat-container">
+          <div class="stat-badge" id="stat-cpu">${icon(icons.cpu)}<span>--%</span></div>
+          <div class="stat-badge" id="stat-ram">${icon(icons.ram)}<span>--</span></div>
+        </div>
+        <div class="controls-container">
+          <button type="button" class="taskbar-btn edit-only-btn" id="btn-add" title="Add widget">
+            ${icon(icons.add)}
+          </button>
+          <button type="button" class="taskbar-btn" id="btn-edit" title="Edit layout">
+            ${icon(icons.edit)}
+          </button>
+          <button type="button" class="taskbar-btn" id="btn-settings" title="Settings">
+            ${icon(icons.settings)}
+          </button>
+          <button type="button" class="taskbar-btn" id="btn-power" title="Power">
+            ${icon(icons.power)}
+          </button>
+        </div>
         <div class="clock" id="clock">--:--</div>
       </div>
     `;
@@ -69,10 +82,10 @@ export class Taskbar {
 
   private renderStats(stats: SystemStats): void {
     const formatted = formatStats(stats, this.config);
-    const cpuEl = this.root.querySelector('#stat-cpu');
-    const ramEl = this.root.querySelector('#stat-ram');
-    if (cpuEl) cpuEl.textContent = `CPU ${formatted.cpu}`;
-    if (ramEl) ramEl.textContent = `RAM ${formatted.ram}`;
+    const cpuEl = this.root.querySelector('#stat-cpu span:last-child');
+    const ramEl = this.root.querySelector('#stat-ram span:last-child');
+    if (cpuEl) cpuEl.textContent = formatted.cpu.trim();
+    if (ramEl) ramEl.textContent = formatted.ram.trim();
   }
 
   private startClock(): void {
