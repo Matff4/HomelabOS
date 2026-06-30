@@ -94,6 +94,16 @@ export class Modals {
                     .join('')}
                 </select>
               </label>
+              <label class="setting-row">Widget title bar
+                <select name="widgetBarHeight">
+                  ${['small', 'medium', 'big']
+                    .map(
+                      (s) =>
+                        `<option value="${s}" ${config.widgetBarHeight === s ? 'selected' : ''}>${s}</option>`,
+                    )
+                    .join('')}
+                </select>
+              </label>
             </div>
           </form>
           <div class="modal-footer">
@@ -115,7 +125,7 @@ export class Modals {
         timeFormat: data.get('timeFormat') as SystemConfig['timeFormat'],
         ramFormat: data.get('ramFormat') as SystemConfig['ramFormat'],
         barHeight: data.get('barHeight') as SystemConfig['barHeight'],
-        widgetBarHeight: config.widgetBarHeight,
+        widgetBarHeight: data.get('widgetBarHeight') as SystemConfig['widgetBarHeight'],
       };
       void saveConfig(next).then(() => {
         applyTheme(next);
@@ -193,6 +203,49 @@ export class Modals {
           this.close();
         }
       });
+    });
+  }
+
+  openWidgetConfig(
+    instanceId: string,
+    widgetName: string,
+    config: Record<string, unknown>,
+    onSave: (next: Record<string, unknown>) => Promise<void>,
+  ): void {
+    const json = JSON.stringify(config, null, 2);
+    this.open(`
+      <div class="modal-backdrop">
+        <div class="modal-card modal-wide">
+          <div class="modal-header">
+            <h2>${widgetName}</h2>
+            <button type="button" class="taskbar-btn modal-close-btn" data-modal-close title="Close">
+              ${icon(icons.close)}
+            </button>
+          </div>
+          <form id="widget-config-form" class="modal-body">
+            <p class="muted">Instance <code>${instanceId}</code></p>
+            <label class="setting-row">Configuration (JSON)
+              <textarea id="widget-config-json" class="config-json" rows="6" spellcheck="false">${json}</textarea>
+            </label>
+          </form>
+          <div class="modal-footer">
+            <button type="button" class="modal-btn" data-modal-close>Cancel</button>
+            <button type="submit" form="widget-config-form" class="modal-btn primary">Save</button>
+          </div>
+        </div>
+      </div>
+    `);
+
+    const form = this.root.querySelector('#widget-config-form') as HTMLFormElement | null;
+    form?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const raw = (this.root.querySelector('#widget-config-json') as HTMLTextAreaElement).value;
+      try {
+        const next = JSON.parse(raw) as Record<string, unknown>;
+        void onSave(next).then(() => this.close());
+      } catch {
+        alert('Invalid JSON — check syntax and try again.');
+      }
     });
   }
 }

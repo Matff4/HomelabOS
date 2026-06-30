@@ -1,9 +1,11 @@
 import { GridStack } from 'gridstack';
 import type { ComponentInfo, LayoutItem, SystemConfig } from './types';
 import type { GridCapacity, GridSpec } from './geometry';
+import type { Modals } from './modals';
 import {
   accentColor,
   fetchComponents,
+  patchWidgetConfig,
   saveLayout,
   shellSSE,
 } from './api';
@@ -17,6 +19,13 @@ import {
   taskbarHeight,
   widgetQuery,
 } from './geometry';
+import { icon, icons } from './icons';
+
+function widgetTitle(item: LayoutItem, component: ComponentInfo): string {
+  const custom = item.config?.title;
+  if (typeof custom === 'string' && custom.trim()) return custom.trim();
+  return component.name;
+}
 
 export class Workspace {
   private grid: GridStack | null = null;
@@ -31,9 +40,12 @@ export class Workspace {
   private physicalH = 0;
   private renderW = 0;
   private renderH = 0;
+  private iframeByInstance = new Map<string, HTMLIFrameElement>();
+  private messageHandler: ((event: MessageEvent) => void) | null = null;
 
   constructor(
     private readonly slider: HTMLElement,
+    private readonly modals: Modals,
     private readonly onEditChange: (enabled: boolean) => void,
   ) {}
 
@@ -62,6 +74,15 @@ export class Workspace {
         this.setPhysicalDisplay(data.width, data.height);
       }
     });
+
+    this.messageHandler = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'SAVE_WIDGET_CONFIG' && typeof data.instanceId === 'string') {
+        void this.applyWidgetConfig(data.instanceId, (data.config as Record<string, unknown>) ?? {});
+      }
+    };
+    window.addEventListener('message', this.messageHandler);
   }
 
   updateConfig(config: SystemConfig): void {
@@ -73,6 +94,7 @@ export class Workspace {
       return;
     }
     this.broadcastTheme();
+    this.refreshWidgetTitles();
   }
 
   setPhysicalDisplay(width: number, height: number): void {
@@ -125,6 +147,28 @@ export class Workspace {
     this.mountWidget(item, component);
   }
 
+  async applyWidgetConfig(
+    instanceId: string,
+    config: Record<string, unknown>,
+  ): Promise<void> {
+    const updated = await patchWidgetConfig(instanceId, config);
+    this.layout = this.layout.map((item) =>
+      item.instance_id === instanceId ? updated : item,
+    );
+    const iframe = this.iframeByInstance.get(instanceId);
+    iframe?.contentWindow?.postMessage({ type: 'WIDGET_CONFIG_UPDATE', config }, '*');
+    this.refreshWidgetTitle(instanceId);
+  }
+
+  async removeWidget(instanceId: string): Promise<void> {
+    if (!this.grid) return;
+    const node = this.grid.engine.nodes.find((n) => n.id === instanceId);
+    if (node?.el) this.grid.removeWidget(node.el);
+    this.layout = this.layout.filter((item) => item.instance_id !== instanceId);
+    this.iframeByInstance.delete(instanceId);
+    await saveLayout(this.layout);
+  }
+
   private currentCapacity(config: SystemConfig): GridCapacity {
     return computeGridCapacity(this.physicalW, this.physicalH, taskbarHeight(config));
   }
@@ -156,6 +200,8 @@ export class Workspace {
 
   private renderGrid(): void {
     if (!this.config) return;
+
+    this.iframeByInstance.clear();
 
     const capacity = this.currentCapacity(this.config);
     const spec = computeGridSpec(capacity, this.renderW, this.renderH, taskbarHeight(this.config));
@@ -197,6 +243,7 @@ export class Workspace {
         staticGrid: !this.editMode,
         animate: false,
         disableOneColumnMode: true,
+        draggable: { handle: '.widget-header' },
       },
       this.gridEl,
     );
@@ -238,7 +285,33 @@ export class Workspace {
 
     const header = document.createElement('div');
     header.className = 'widget-header';
-    header.textContent = component.name;
+    header.innerHTML = `
+      ${icon(component.icon || icons.widget)}
+      <span class="widget-title">${widgetTitle(clamped, component)}</span>
+      <button type="button" class="widget-settings-btn" title="Configure widget">
+        ${icon(icons.settings)}
+      </button>
+      <button type="button" class="widget-delete-btn" title="Remove widget">
+        ${icon(icons.close)}
+      </button>
+    `;
+
+    header.querySelector('.widget-settings-btn')?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const layoutItem = this.layout.find((row) => row.instance_id === clamped.instance_id);
+      if (!layoutItem) return;
+      this.modals.openWidgetConfig(
+        clamped.instance_id,
+        widgetTitle(layoutItem, component),
+        layoutItem.config,
+        (next) => this.applyWidgetConfig(clamped.instance_id, next),
+      );
+    });
+
+    header.querySelector('.widget-delete-btn')?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      void this.removeWidget(clamped.instance_id);
+    });
 
     const iframe = document.createElement('iframe');
     iframe.className = 'widget-iframe';
@@ -265,6 +338,8 @@ export class Workspace {
       );
     });
 
+    this.iframeByInstance.set(clamped.instance_id, iframe);
+
     content.appendChild(header);
     content.appendChild(iframe);
 
@@ -285,6 +360,19 @@ export class Workspace {
     };
     mountContent();
     if (!content.isConnected) requestAnimationFrame(mountContent);
+  }
+
+  private refreshWidgetTitles(): void {
+    this.layout.forEach((item) => this.refreshWidgetTitle(item.instance_id));
+  }
+
+  private refreshWidgetTitle(instanceId: string): void {
+    const item = this.layout.find((row) => row.instance_id === instanceId);
+    const component = item ? this.components.get(item.component_id) : null;
+    if (!item || !component) return;
+    const node = this.grid?.engine.nodes.find((n) => n.id === instanceId);
+    const titleEl = node?.el?.querySelector('.widget-title');
+    if (titleEl) titleEl.textContent = widgetTitle(item, component);
   }
 
   private broadcastTheme(): void {

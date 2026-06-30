@@ -53,7 +53,7 @@ async function boot(): Promise<void> {
     const taskbar = new Taskbar(taskbarEl, config);
     taskbar.bindStats();
 
-    const workspace = new Workspace(slider, (enabled) => {
+    const workspace = new Workspace(slider, modals, (enabled) => {
       taskbar.setEditActive(enabled);
     });
 

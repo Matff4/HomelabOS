@@ -276,7 +276,7 @@ body.edit-mode .edit-only-btn {
 }
 
 body.edit-mode .grid-stack-item-content {
-  cursor: grab;
+  outline: 2px dashed var(--accent);
 }
 
 .widget-card {
@@ -287,18 +287,104 @@ body.edit-mode .grid-stack-item-content {
 }
 
 .widget-header {
-  display: none;
   flex: 0 0 auto;
-  padding: 6px 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--accent);
-  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: var(--widget-header);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  line-height: 1;
+  min-width: 0;
+}
+
+body.widget-bar-small .widget-header {
+  padding: 4px 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+body.widget-bar-small .widget-header .material-symbols-rounded {
+  font-size: 18px;
+}
+
+body.widget-bar-medium .widget-header {
+  padding: 6px 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+body.widget-bar-medium .widget-header .material-symbols-rounded {
+  font-size: 22px;
+}
+
+body.widget-bar-big .widget-header {
+  padding: 8px 14px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+body.widget-bar-big .widget-header .material-symbols-rounded {
+  font-size: 28px;
+}
+
+.widget-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-settings-btn,
+.widget-delete-btn {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text);
+  transition: background 0.2s;
+}
+
+.widget-settings-btn .material-symbols-rounded,
+.widget-delete-btn .material-symbols-rounded {
+  font-size: 18px;
+}
+
+.widget-settings-btn:hover {
+  background: var(--accent);
+  color: #11111b;
+}
+
+.widget-delete-btn {
+  background: #f38ba8;
+  color: #11111b;
+}
+
+.widget-delete-btn:hover {
+  background: #ffb4c9;
+}
+
+body.edit-mode .widget-settings-btn {
+  display: none !important;
+}
+
+body:not(.edit-mode) .widget-delete-btn {
+  display: none !important;
 }
 
 body.edit-mode .widget-header {
-  display: block;
+  cursor: grab;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.edit-mode .widget-iframe {
+  pointer-events: none;
 }
 
 .widget-card .widget-iframe {
@@ -498,6 +584,24 @@ body.edit-mode .widget-header {
 
 .muted {
   color: var(--muted);
+}
+
+.muted code {
+  font-size: 0.85em;
+}
+
+.config-json {
+  width: 100%;
+  min-height: 5rem;
+  max-height: min(12rem, 30vh);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.15);
+  color: var(--text);
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  resize: vertical;
 }
 
 @media (max-height: 480px) {

@@ -62,7 +62,22 @@ export function applyTheme(config: SystemConfig): void {
   document.body.classList.add(config.theme === 'light' ? 'theme-light' : 'theme-dark');
   document.body.classList.remove('bar-small', 'bar-medium', 'bar-big');
   document.body.classList.add(`bar-${config.barHeight || 'medium'}`);
+  document.body.classList.remove('widget-bar-small', 'widget-bar-medium', 'widget-bar-big');
+  document.body.classList.add(`widget-bar-${config.widgetBarHeight || 'medium'}`);
   document.documentElement.style.setProperty('--accent', accentColor(config));
+}
+
+export async function patchWidgetConfig(
+  instanceId: string,
+  config: Record<string, unknown>,
+): Promise<LayoutItem> {
+  const res = await fetch('/api/layout/widget', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instance_id: instanceId, config }),
+  });
+  if (!res.ok) throw new Error('Failed to save widget config');
+  return res.json();
 }
 
 export type SSEHandler = (message: SSEMessage) => void;

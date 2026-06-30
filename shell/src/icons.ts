@@ -8,6 +8,7 @@ export const icons = {
   settings: 'settings',
   power: 'power_settings_new',
   close: 'close',
+  widget: 'widgets',
 } as const;
 
 export function icon(name: string, label?: string): string {
