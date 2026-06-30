@@ -7,8 +7,10 @@ export const MIN_CELL = 90;
 export const MAX_CELL = 130;
 const MIN_COLS = 4;
 const MAX_COLS = 16;
-/** Gap between grid cells (GridStack margin). */
+/** Visual gap between adjacent widget tiles (px). */
 export const GRID_GAP = 10;
+/** GridStack margin — inset inside each cell; two adjacent tiles = GRID_GAP between them. */
+export const TILE_MARGIN = GRID_GAP / 2;
 const WORKSPACE_PAD = 8;
 const STAGE_PAD = GRID_GAP;
 

@@ -18,6 +18,7 @@ import {
   gridCapacityKey,
   gridHeight,
   MIN_CELL,
+  TILE_MARGIN,
   taskbarHeight,
   widgetQuery,
 } from './geometry';
@@ -238,7 +239,7 @@ export class Workspace {
       {
         column: spec.cols,
         cellHeight: spec.cellH,
-        margin: spec.gap,
+        margin: TILE_MARGIN,
         minRow: spec.rows,
         maxRow: spec.rows,
         float: true,
@@ -303,7 +304,7 @@ export class Workspace {
     if (!this.grid) return;
     this.grid.column(spec.cols);
     this.grid.cellHeight(spec.cellH);
-    this.grid.margin(spec.gap);
+    this.grid.margin(TILE_MARGIN);
     requestAnimationFrame(() => this.syncSquareCellSize());
   }
 
