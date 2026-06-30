@@ -1,13 +1,15 @@
 :root {
   color-scheme: dark;
-  --bg: #1e1e2e;
-  --surface: #181825;
+  --bg: #11111b;
+  --surface: #1e1e2e;
   --text: #cdd6f4;
   --muted: #a6adc8;
   --accent: #89b4fa;
-  --border: rgba(255, 255, 255, 0.12);
-  --tb-gap: 8px;
+  --border: rgba(137, 180, 250, 0.35);
+  --tb-gap: 10px;
   --tb-h: 48px;
+  --vp-h: 100dvh;
+  --vp-w: 100vw;
 }
 
 * {
@@ -17,9 +19,9 @@
 html,
 body {
   margin: 0;
-  width: 100%;
-  height: 100vh;
-  height: 100dvh;
+  width: var(--vp-w);
+  height: var(--vp-h);
+  min-height: 280px;
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
@@ -27,8 +29,8 @@ body {
 }
 
 body {
-  display: grid;
-  grid-template-rows: var(--tb-h) minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
 }
 
 body.bar-small { --tb-h: 36px; }
@@ -36,11 +38,11 @@ body.bar-big { --tb-h: 64px; }
 
 body.theme-light {
   color-scheme: light;
-  --bg: #eff1f5;
-  --surface: #ffffff;
+  --bg: #dce0e8;
+  --surface: #eff1f5;
   --text: #4c4f69;
   --muted: #6c6f85;
-  --border: rgba(0, 0, 0, 0.12);
+  --border: rgba(76, 79, 105, 0.25);
 }
 
 body.booting .workspace-viewport {
@@ -59,16 +61,17 @@ body.booting .workspace-viewport {
 }
 
 .top-bar {
-  grid-row: 1;
+  flex: 0 0 var(--tb-h);
   z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--tb-gap);
   height: var(--tb-h);
-  padding: 0 12px;
+  padding: 0 14px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--accent);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
 }
 
 .top-bar.size-small { font-size: 0.85rem; }
@@ -83,14 +86,16 @@ body.booting .workspace-viewport {
 }
 
 .os-title {
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 1.05rem;
   color: var(--accent);
   white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 
 .sse-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: #f38ba8;
   flex-shrink: 0;
@@ -105,14 +110,15 @@ body.booting .workspace-viewport {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--text);
+  font-size: 0.95rem;
 }
 
 .taskbar-btn {
   border: 1px solid var(--border);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text);
   border-radius: 8px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   cursor: pointer;
 }
 
@@ -130,77 +136,60 @@ body.edit-mode .edit-only {
 }
 
 .workspace-viewport {
-  grid-row: 2;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+  background: var(--bg);
 }
 
 .workspace-slider {
   width: 100%;
   height: 100%;
-  overflow: hidden;
 }
 
-.pane-wrapper {
+.widget-stage {
   width: 100%;
   height: 100%;
-  padding: 5px;
-}
-
-.grid-stack {
-  position: relative;
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0;
-  background: transparent;
-}
-
-.grid-stack-item {
-  touch-action: none;
-}
-
-.grid-stack-item-content {
-  inset: 5px !important;
-  overflow: hidden;
-  display: flex !important;
-  flex-direction: column;
-  background: transparent;
-}
-
-.grid-stack-item-content:empty {
-  display: none !important;
-}
-
-.widget-card {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  width: 100%;
-  height: 100%;
+  gap: 8px;
+  padding: 8px;
+}
+
+.widget-panel {
+  flex: 1 1 auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .widget-header {
-  flex-shrink: 0;
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  color: var(--muted);
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
   border-bottom: 1px solid var(--border);
-  cursor: default;
-}
-
-body.edit-mode .widget-header {
-  cursor: move;
+  background: rgba(0, 0, 0, 0.15);
 }
 
 .widget-iframe {
   flex: 1 1 auto;
   width: 100%;
-  min-height: 0;
+  min-height: 120px;
   border: 0;
   background: var(--bg);
+}
+
+.widget-empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 1rem;
 }

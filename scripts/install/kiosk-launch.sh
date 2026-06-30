@@ -26,6 +26,8 @@ done
 exec "$CHROMIUM" \
   --ozone-platform=wayland \
   --kiosk \
+  --start-fullscreen \
+  --force-device-scale-factor=1 \
   --noerrdialogs \
   --disable-infobars \
   --disable-session-crashed-bubble \

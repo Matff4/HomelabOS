@@ -115,8 +115,8 @@ export async function ensureDemoLayout(components: ComponentInfo[]): Promise<Lay
     component_id: demo.id,
     x: 0,
     y: 0,
-    w: demo.size?.w ?? 4,
-    h: demo.size?.h ?? 2,
+    w: 12,
+    h: 2,
     pane: 0,
     config: { title: 'HomelabOS' },
   };

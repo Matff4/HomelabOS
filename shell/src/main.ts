@@ -1,12 +1,21 @@
-import 'gridstack/dist/gridstack.min.css';
 import './styles/shell.css';
 
 import { applyTheme, ensureDemoLayout, fetchConfig, shellSSE } from './api';
 import { Taskbar } from './taskbar';
 import { Workspace } from './workspace';
 
+function syncViewport(): void {
+  const h = Math.max(window.innerHeight || 0, 280);
+  const w = Math.max(window.innerWidth || 0, 400);
+  document.documentElement.style.setProperty('--vp-h', `${h}px`);
+  document.documentElement.style.setProperty('--vp-w', `${w}px`);
+}
+
 async function boot(): Promise<void> {
   try {
+    syncViewport();
+    window.addEventListener('resize', syncViewport);
+
     const config = await fetchConfig();
     applyTheme(config);
 
@@ -36,7 +45,7 @@ async function boot(): Promise<void> {
       void workspace.addDemoWidget();
     });
 
-    window.setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+    document.body.dataset.shellReady = '1';
   } finally {
     document.body.classList.remove('booting');
   }

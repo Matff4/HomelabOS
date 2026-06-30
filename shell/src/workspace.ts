@@ -1,14 +1,14 @@
-import { GridStack } from 'gridstack';
 import type { ComponentInfo, LayoutItem, SystemConfig } from './types';
 import { accentColor, fetchComponents, saveLayout, shellSSE } from './api';
-import { calculateGridGeometry, GRID_COLS, GRID_ROWS, widgetQuery } from './geometry';
+import { widgetQuery } from './geometry';
 
+/** Full-bleed widget layout (GridStack deferred until multi-widget edit mode). */
 export class Workspace {
-  private grid: GridStack | null = null;
   private editMode = false;
   private components = new Map<string, ComponentInfo>();
   private layout: LayoutItem[] = [];
   private config: SystemConfig | null = null;
+  private stage: HTMLElement | null = null;
 
   constructor(
     private readonly viewport: HTMLElement,
@@ -20,14 +20,12 @@ export class Workspace {
     this.config = config;
     this.layout = layout;
     this.components = new Map((await fetchComponents()).map((c) => [c.id, c]));
-    this.renderPane(0);
-    window.addEventListener('resize', () => this.reflow());
+    this.render();
   }
 
   setEditMode(enabled: boolean): void {
     this.editMode = enabled;
     document.body.classList.toggle('edit-mode', enabled);
-    this.grid?.setStatic(!enabled);
     this.onEditChange(enabled);
     if (!enabled) void this.persistLayout();
   }
@@ -42,58 +40,38 @@ export class Workspace {
 
   async addDemoWidget(): Promise<void> {
     const demo = this.components.get('demo_widget');
-    if (!demo || !this.grid || !this.config) return;
-    const instanceId = `inst_${Date.now()}`;
+    if (!demo || !this.config) return;
     const item: LayoutItem = {
-      instance_id: instanceId,
+      instance_id: `inst_${Date.now()}`,
       component_id: demo.id,
       x: 0,
       y: 0,
-      w: demo.size?.w ?? 2,
-      h: demo.size?.h ?? 2,
+      w: 12,
+      h: 2,
       pane: 0,
       config: {},
     };
-    this.mountWidget(item, demo);
     this.layout.push(item);
     await saveLayout(this.layout);
+    this.render();
   }
 
-  private renderPane(paneIndex: number): void {
+  private render(): void {
     if (!this.config) return;
     this.slider.innerHTML = '';
-    const wrapper = document.createElement('div');
-    wrapper.className = 'pane-wrapper';
-    const gridEl = document.createElement('div');
-    gridEl.className = 'grid-stack';
-    gridEl.id = 'grid-0';
-    wrapper.appendChild(gridEl);
-    this.slider.appendChild(wrapper);
+    this.stage = document.createElement('div');
+    this.stage.className = 'widget-stage';
+    this.slider.appendChild(this.stage);
 
-    const geo = calculateGridGeometry(this.config);
-    gridEl.style.width = '100%';
-    gridEl.style.height = '100%';
+    const paneItems = this.layout.filter((item) => item.pane === 0);
+    if (paneItems.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'widget-empty';
+      empty.textContent = 'No widgets on this pane.';
+      this.stage.appendChild(empty);
+      return;
+    }
 
-    this.grid = GridStack.init(
-      {
-        cellHeight: geo.cellH,
-        margin: geo.gap,
-        column: GRID_COLS,
-        row: GRID_ROWS,
-        minRow: GRID_ROWS,
-        maxRow: GRID_ROWS,
-        float: false,
-        staticGrid: !this.editMode,
-        disableOneColumnMode: true,
-      },
-      gridEl,
-    );
-
-    this.grid.on('change', () => {
-      if (this.editMode) void this.persistLayout();
-    });
-
-    const paneItems = this.layout.filter((item) => item.pane === paneIndex);
     paneItems.forEach((item) => {
       const component = this.components.get(item.component_id);
       if (component) this.mountWidget(item, component);
@@ -101,10 +79,11 @@ export class Workspace {
   }
 
   private mountWidget(item: LayoutItem, component: ComponentInfo): void {
-    if (!this.grid || !this.config) return;
+    if (!this.config || !this.stage) return;
 
-    const content = document.createElement('div');
-    content.className = 'widget-card';
+    const panel = document.createElement('article');
+    panel.className = 'widget-panel';
+    panel.dataset.instanceId = item.instance_id;
 
     const header = document.createElement('div');
     header.className = 'widget-header';
@@ -117,15 +96,12 @@ export class Workspace {
       `${component.entry_url}?${widgetQuery(this.config, item.instance_id)}`,
     );
     iframe.setAttribute('loading', 'lazy');
+    iframe.setAttribute('title', component.name);
 
     iframe.addEventListener('load', () => {
       shellSSE.registerIframe(iframe);
       iframe.contentWindow?.postMessage(
-        {
-          type: 'WIDGET_CONFIG',
-          instanceId: item.instance_id,
-          config: item.config,
-        },
+        { type: 'WIDGET_CONFIG', instanceId: item.instance_id, config: item.config },
         '*',
       );
       iframe.contentWindow?.postMessage(
@@ -138,61 +114,12 @@ export class Workspace {
       );
     });
 
-    content.appendChild(header);
-    content.appendChild(iframe);
-
-    // GridStack expects `content` as HTML string — DOM nodes become "[object HTMLDivElement]".
-    this.grid.addWidget({
-      id: item.instance_id,
-      x: item.x,
-      y: item.y,
-      w: item.w,
-      h: item.h,
-    });
-
-    const mountContent = (): void => {
-      const node = this.grid!.engine.nodes.find((n) => n.id === item.instance_id);
-      const slot = node?.el?.querySelector('.grid-stack-item-content');
-      if (!slot) return;
-      slot.innerHTML = '';
-      slot.appendChild(content);
-    };
-
-    mountContent();
-    if (!content.isConnected) {
-      requestAnimationFrame(mountContent);
-    }
+    panel.appendChild(header);
+    panel.appendChild(iframe);
+    this.stage.appendChild(panel);
   }
 
   private async persistLayout(): Promise<void> {
-    if (!this.grid) return;
-    const nodes = this.grid.engine.nodes;
-    const byId = new Map(this.layout.map((item) => [item.instance_id, item]));
-    const next: LayoutItem[] = [];
-
-    nodes.forEach((node) => {
-      const instanceId = node.id;
-      if (!instanceId) return;
-      const existing = byId.get(instanceId);
-      if (!existing) return;
-      next.push({
-        ...existing,
-        x: node.x ?? existing.x,
-        y: node.y ?? existing.y,
-        w: node.w ?? existing.w,
-        h: node.h ?? existing.h,
-        pane: 0,
-      });
-    });
-
-    this.layout = next;
-    await saveLayout(next);
-  }
-
-  private reflow(): void {
-    if (!this.config || !this.grid) return;
-    const geo = calculateGridGeometry(this.config);
-    this.grid.cellHeight(geo.cellH);
-    this.grid.margin(geo.gap);
+    await saveLayout(this.layout);
   }
 }

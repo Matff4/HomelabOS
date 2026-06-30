@@ -43,9 +43,9 @@ homelabos/
 - [x] pytest from day one
 
 ### Phase 2 — Shell (~1–2 weeks)
-- [x] Vite + TypeScript (initial shell — taskbar, workspace, demo widget)
+- [x] Vite + TypeScript (taskbar, full-bleed widget stage)
 - [x] Single SSE connection → postMessage relay to widget iframes
-- [ ] GridStack workspace (multi-pane, edit mode) — single pane + edit mode sketch
+- [ ] GridStack workspace (multi-widget drag/edit) — after layout stable on hardware
 - [x] Taskbar via SSE (no polling)
 - [ ] Modals: settings, power, confirm, widget config
 - [x] Display-aware grid geometry (basic)
