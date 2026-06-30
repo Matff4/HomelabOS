@@ -2,12 +2,13 @@ import type { DisplayInfo, LayoutItem, SystemConfig, SystemStats } from './types
 
 const BAR_HEIGHT: Record<string, number> = { small: 36, medium: 48, big: 64 };
 
-/** Minimum readable widget row height on the physical panel (px). */
-const MIN_CELL_H = 72;
-/** Layout x/w are stored in these column units. */
-const DEFAULT_COLS = 12;
-const GRID_GAP = 6;
-const WORKSPACE_PAD = 8;
+/** Square 1×1 tile size bounds (px). */
+export const MIN_CELL = 90;
+export const MAX_CELL = 130;
+const MIN_COLS = 4;
+const MAX_COLS = 24;
+const GRID_GAP = 10;
+const WORKSPACE_PAD = 10;
 
 export interface GridCapacity {
   cols: number;
@@ -20,22 +21,21 @@ export interface GridSpec extends GridCapacity {
   workspaceW: number;
   workspaceH: number;
   taskbarH: number;
+  gridPixelW: number;
+  gridPixelH: number;
 }
 
 export function taskbarHeight(config: SystemConfig): number {
   return BAR_HEIGHT[config.barHeight] ?? 48;
 }
 
-/** Physical panel resolution from the Pi API (authoritative for grid capacity). */
 export function getPhysicalDisplay(display: DisplayInfo | null): { width: number; height: number } {
   if (display && display.width > 0 && display.height > 0) {
     return { width: display.width, height: display.height };
   }
-  // API unreachable — fall back so the shell still boots locally
   return getBrowserViewport();
 }
 
-/** Browser viewport — used for page layout and scaled tile pixel size. */
 export function getBrowserViewport(): { width: number; height: number } {
   return {
     width: Math.max(window.innerWidth || 0, 320),
@@ -43,39 +43,86 @@ export function getBrowserViewport(): { width: number; height: number } {
   };
 }
 
+function workspaceDims(
+  viewportW: number,
+  viewportH: number,
+  taskbarH: number,
+): { workspaceW: number; workspaceH: number } {
+  return {
+    workspaceW: Math.max(viewportW - WORKSPACE_PAD * 2, MIN_CELL * MIN_COLS),
+    workspaceH: Math.max(viewportH - taskbarH - WORKSPACE_PAD * 2, MIN_CELL),
+  };
+}
+
+function cellFromCols(workspaceW: number, cols: number): number {
+  return (workspaceW - GRID_GAP * (cols + 1)) / cols;
+}
+
+function rowsThatFit(workspaceH: number, cell: number): number {
+  return Math.max(1, Math.floor((workspaceH - GRID_GAP) / (cell + GRID_GAP)));
+}
+
+function gridHeight(rows: number, cell: number): number {
+  return rows * cell + GRID_GAP * (rows + 1);
+}
+
+function gridWidth(cols: number, cell: number): number {
+  return cols * cell + GRID_GAP * (cols + 1);
+}
+
 /**
- * Row/column count from the connected physical display only.
- * Same result whether you open the shell on the Pi or from a PC browser.
+ * Physical panel → grid capacity. Square tiles in [MIN_CELL, MAX_CELL]; prefer denser grids.
  */
 export function computeGridCapacity(
   physicalW: number,
   physicalH: number,
   taskbarH: number,
 ): GridCapacity {
-  const workspaceW = Math.max(physicalW - WORKSPACE_PAD * 2, 320);
-  const workspaceH = Math.max(physicalH - taskbarH - WORKSPACE_PAD * 2, MIN_CELL_H);
+  const { workspaceW, workspaceH } = workspaceDims(physicalW, physicalH, taskbarH);
 
-  const cols = DEFAULT_COLS;
+  let best: GridCapacity = { cols: 12, rows: 1 };
+  let bestDensity = 0;
 
-  const maxRows = Math.max(
-    1,
-    Math.floor((workspaceH + GRID_GAP) / (MIN_CELL_H + GRID_GAP)),
-  );
+  for (let cols = MAX_COLS; cols >= MIN_COLS; cols--) {
+    const cellRaw = cellFromCols(workspaceW, cols);
+    if (cellRaw > MAX_CELL || cellRaw < MIN_CELL) continue;
 
-  const cellW = (workspaceW - GRID_GAP * (cols + 1)) / cols;
-  let refCellH = (workspaceH - GRID_GAP * (maxRows + 1)) / maxRows;
-  refCellH = Math.max(MIN_CELL_H, Math.min(refCellH, cellW));
+    const cell = Math.floor(cellRaw);
+    const rows = rowsThatFit(workspaceH, cell);
+    if (gridHeight(rows, cell) > workspaceH + 0.5) continue;
 
-  const rows = Math.max(
-    1,
-    Math.floor((workspaceH + GRID_GAP) / (refCellH + GRID_GAP)),
-  );
+    const density = cols * rows;
+    if (density > bestDensity) {
+      bestDensity = density;
+      best = { cols, rows };
+    }
+  }
 
-  return { cols, rows };
+  if (bestDensity > 0) return best;
+
+  // Fallback: closest valid square size, then derive cols/rows
+  let cols = 12;
+  let cell = Math.floor(cellFromCols(workspaceW, cols));
+  cell = Math.max(MIN_CELL, Math.min(MAX_CELL, cell));
+
+  if (cell > MAX_CELL) {
+    while (cols < MAX_COLS && cell > MAX_CELL) {
+      cols += 1;
+      cell = Math.floor(cellFromCols(workspaceW, cols));
+    }
+  } else if (cell < MIN_CELL) {
+    while (cols > MIN_COLS && cell < MIN_CELL) {
+      cols -= 1;
+      cell = Math.floor(cellFromCols(workspaceW, cols));
+    }
+  }
+
+  cell = Math.max(MIN_CELL, Math.min(MAX_CELL, cell));
+  return { cols, rows: rowsThatFit(workspaceH, cell) };
 }
 
 /**
- * Full grid spec: capacity from physical display, cell pixel height from render viewport.
+ * Render viewport → square cell pixel size (same cols/rows as physical capacity).
  */
 export function computeGridSpec(
   capacity: GridCapacity,
@@ -83,22 +130,23 @@ export function computeGridSpec(
   renderH: number,
   taskbarH: number,
 ): GridSpec {
-  const workspaceW = Math.max(renderW - WORKSPACE_PAD * 2, 320);
-  const workspaceH = Math.max(renderH - taskbarH - WORKSPACE_PAD * 2, capacity.rows);
+  const { workspaceW, workspaceH } = workspaceDims(renderW, renderH, taskbarH);
 
-  const cellH = Math.max(
-    1,
-    Math.floor((workspaceH - GRID_GAP * (capacity.rows + 1)) / capacity.rows),
-  );
+  const fromW = cellFromCols(workspaceW, capacity.cols);
+  const fromH = (workspaceH - GRID_GAP * (capacity.rows + 1)) / capacity.rows;
+  let cell = Math.floor(Math.min(fromW, fromH));
+  cell = Math.max(MIN_CELL, Math.min(MAX_CELL, cell));
 
   return {
     cols: capacity.cols,
     rows: capacity.rows,
-    cellH,
+    cellH: cell,
     gap: GRID_GAP,
     workspaceW,
     workspaceH,
     taskbarH,
+    gridPixelW: gridWidth(capacity.cols, cell),
+    gridPixelH: gridHeight(capacity.rows, cell),
   };
 }
 
@@ -106,7 +154,6 @@ export function gridCapacityKey(capacity: GridCapacity): string {
   return `${capacity.cols}x${capacity.rows}`;
 }
 
-/** Clamp saved layout items to current grid capacity (positions preserved when possible). */
 export function clampLayoutItem(item: LayoutItem, spec: GridCapacity): LayoutItem {
   const w = Math.max(1, Math.min(item.w, spec.cols));
   const x = Math.max(0, Math.min(item.x, spec.cols - w));
@@ -120,6 +167,8 @@ export function applyGridSpecToDocument(spec: GridSpec): void {
   document.documentElement.style.setProperty('--grid-rows', String(spec.rows));
   document.documentElement.style.setProperty('--grid-cell-h', `${spec.cellH}px`);
   document.documentElement.style.setProperty('--grid-gap', `${spec.gap}px`);
+  document.documentElement.style.setProperty('--grid-pixel-w', `${spec.gridPixelW}px`);
+  document.documentElement.style.setProperty('--grid-pixel-h', `${spec.gridPixelH}px`);
 }
 
 export function widgetQuery(config: SystemConfig, instanceId: string): string {

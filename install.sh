@@ -355,8 +355,22 @@ echo "==> [7/7] Finalizing..."
 
 install -m 755 "$INSTALL_DIR/scripts/install/homelabos-update.sh" /usr/local/bin/homelabos-update
 
-# Remove legacy passwordless sudo if a previous install created it
+# Remove legacy broad passwordless sudo if a previous install created it
 rm -f /etc/sudoers.d/homelabos
+
+# Scoped sudo for power actions (reboot / shutdown / restart kiosk)
+SYSTEMCTL_BIN="$(command -v systemctl || true)"
+if [[ -n "$SYSTEMCTL_BIN" ]]; then
+  echo "==> Power management sudo for $SERVICE_USER..."
+  cat > /etc/sudoers.d/homelabos-power <<EOF
+# HomelabOS — power actions from the API (no password prompt)
+$SERVICE_USER ALL=(ALL) NOPASSWD: $SYSTEMCTL_BIN reboot, $SYSTEMCTL_BIN poweroff, $SYSTEMCTL_BIN restart homelabos-kiosk
+EOF
+  chmod 440 /etc/sudoers.d/homelabos-power
+  visudo -cf /etc/sudoers.d/homelabos-power
+else
+  echo "WARN: systemctl not found — power API will not work until systemd is available"
+fi
 
 # ── Quiet boot (optional) ─────────────────────────────────────────────────────
 install -m 755 "$INSTALL_DIR/scripts/install/quiet-boot.sh" "$INSTALL_DIR/scripts/quiet-boot.sh"

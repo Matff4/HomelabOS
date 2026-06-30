@@ -256,13 +256,18 @@ body.edit-mode .edit-only-btn {
 .grid-stage {
   width: 100%;
   height: 100%;
-  padding: var(--grid-gap, 6px);
+  padding: var(--grid-gap, 10px);
   box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: auto;
 }
 
 .grid-stack {
-  width: 100%;
-  height: 100%;
+  width: var(--grid-pixel-w, 100%);
+  height: var(--grid-pixel-h, 100%);
+  max-width: 100%;
   background: transparent;
 }
 
@@ -370,10 +375,12 @@ body.widget-bar-big .widget-header .material-symbols-rounded {
   background: #ffb4c9;
 }
 
-body.edit-mode .widget-settings-btn {
-  display: none !important;
+body.edit-mode .widget-settings-btn,
+body.edit-mode .widget-delete-btn {
+  display: inline-flex !important;
 }
 
+body:not(.edit-mode) .widget-settings-btn,
 body:not(.edit-mode) .widget-delete-btn {
   display: none !important;
 }
@@ -515,15 +522,41 @@ body.edit-mode .widget-iframe {
   padding: 6px 8px;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.15);
+  background-color: var(--surface);
   color: var(--text);
   font-family: inherit;
   font-size: 0.85rem;
+  color-scheme: inherit;
+  appearance: auto;
 }
 
 .setting-row select:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+body.theme-dark .setting-row select {
+  color-scheme: dark;
+  background-color: #313244;
+  color: #cdd6f4;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.theme-light .setting-row select {
+  color-scheme: light;
+  background-color: #e6e9f0;
+  color: #4c4f69;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+body.theme-dark .setting-row select option {
+  background-color: #313244;
+  color: #cdd6f4;
+}
+
+body.theme-light .setting-row select option {
+  background-color: #eff1f5;
+  color: #4c4f69;
 }
 
 .modal-btn {

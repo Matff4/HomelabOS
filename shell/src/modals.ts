@@ -1,5 +1,6 @@
 import type { ComponentInfo, SystemConfig } from './types';
 import { applyTheme, saveConfig } from './api';
+import { selectOptions } from './format';
 import { icon, icons } from './icons';
 
 type ConfirmHandler = () => void | Promise<void>;
@@ -40,7 +41,11 @@ export class Modals {
       </div>
     `);
     this.root.querySelector('#modal-confirm')?.addEventListener('click', () => {
-      void Promise.resolve(onConfirm()).finally(() => this.close());
+      void Promise.resolve(onConfirm())
+        .then(() => this.close())
+        .catch((err) => {
+          alert(err instanceof Error ? err.message : 'Action failed');
+        });
     });
   }
 
@@ -57,52 +62,22 @@ export class Modals {
           <form id="settings-form" class="modal-body">
             <div class="settings-form">
               <label class="setting-row">Theme
-                <select name="theme">
-                  <option value="dark" ${config.theme === 'dark' ? 'selected' : ''}>Dark</option>
-                  <option value="light" ${config.theme === 'light' ? 'selected' : ''}>Light</option>
-                </select>
+                <select name="theme">${selectOptions(['dark', 'light'], config.theme)}</select>
               </label>
               <label class="setting-row">Accent
-                <select name="accentColor">
-                  ${['blue', 'green', 'purple', 'red', 'orange', 'yellow']
-                    .map(
-                      (c) =>
-                        `<option value="${c}" ${config.accentColor === c ? 'selected' : ''}>${c}</option>`,
-                    )
-                    .join('')}
-                </select>
+                <select name="accentColor">${selectOptions(['blue', 'green', 'purple', 'red', 'orange', 'yellow'], config.accentColor)}</select>
               </label>
               <label class="setting-row">Time format
-                <select name="timeFormat">
-                  <option value="24" ${config.timeFormat === '24' ? 'selected' : ''}>24h</option>
-                  <option value="12" ${config.timeFormat === '12' ? 'selected' : ''}>12h</option>
-                </select>
+                <select name="timeFormat">${selectOptions(['24', '12'], config.timeFormat)}</select>
               </label>
               <label class="setting-row">RAM display
-                <select name="ramFormat">
-                  <option value="percent" ${config.ramFormat === 'percent' ? 'selected' : ''}>Percent</option>
-                  <option value="absolute" ${config.ramFormat === 'absolute' ? 'selected' : ''}>Absolute</option>
-                </select>
+                <select name="ramFormat">${selectOptions(['percent', 'absolute'], config.ramFormat)}</select>
               </label>
               <label class="setting-row">Taskbar size
-                <select name="barHeight">
-                  ${['small', 'medium', 'big']
-                    .map(
-                      (s) =>
-                        `<option value="${s}" ${config.barHeight === s ? 'selected' : ''}>${s}</option>`,
-                    )
-                    .join('')}
-                </select>
+                <select name="barHeight">${selectOptions(['small', 'medium', 'big'], config.barHeight)}</select>
               </label>
               <label class="setting-row">Widget title bar
-                <select name="widgetBarHeight">
-                  ${['small', 'medium', 'big']
-                    .map(
-                      (s) =>
-                        `<option value="${s}" ${config.widgetBarHeight === s ? 'selected' : ''}>${s}</option>`,
-                    )
-                    .join('')}
-                </select>
+                <select name="widgetBarHeight">${selectOptions(['small', 'medium', 'big'], config.widgetBarHeight)}</select>
               </label>
             </div>
           </form>
@@ -141,7 +116,7 @@ export class Modals {
         <div class="modal-card modal-compact">
           <div class="modal-header"><h2>Core Management</h2></div>
           <div class="modal-body modal-actions vertical">
-            <button type="button" class="modal-btn sys-btn" data-power="restart-kiosk">Restart kiosk</button>
+            <button type="button" class="modal-btn sys-btn" data-power="restart-kiosk">Restart Kiosk</button>
             <button type="button" class="modal-btn sys-btn danger" data-power="reboot">Reboot</button>
             <button type="button" class="modal-btn sys-btn danger" data-power="shutdown">Shutdown</button>
           </div>
@@ -161,11 +136,16 @@ export class Modals {
           'restart-kiosk': 'Restart the kiosk service?',
         };
         this.confirm('Confirm', labels[action] ?? 'Proceed?', async () => {
-          await fetch('/api/system/power', {
+          const res = await fetch('/api/system/power', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action }),
           });
+          if (!res.ok) {
+            throw new Error(
+              'Power action was rejected. Run homelabos-update on the Pi to install sudo permissions.',
+            );
+          }
         });
       });
     });

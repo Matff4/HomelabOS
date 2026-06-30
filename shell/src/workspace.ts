@@ -193,7 +193,7 @@ export class Workspace {
       return;
     }
 
-    if (!this.spec || next.cellH !== this.spec.cellH) {
+    if (!this.spec || next.cellH !== this.spec.cellH || next.gridPixelW !== this.spec.gridPixelW) {
       this.applySpecToGrid(next);
     }
   }

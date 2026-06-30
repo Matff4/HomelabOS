@@ -72,6 +72,8 @@ def test_system_power(client):
     assert response.status_code == 200
     assert response.json()["action"] == "reboot"
     popen.assert_called_once()
+    args = popen.call_args[0][0]
+    assert "reboot" in args
 
 
 def test_plugins_empty(client):
