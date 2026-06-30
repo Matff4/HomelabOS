@@ -41,7 +41,9 @@ export function accentColor(config: SystemConfig): string {
 }
 
 export function applyTheme(config: SystemConfig): void {
-  document.body.className = config.theme === 'light' ? 'theme-light' : 'theme-dark';
+  document.body.classList.remove('theme-light', 'theme-dark');
+  document.body.classList.add(config.theme === 'light' ? 'theme-light' : 'theme-dark');
+  document.body.classList.remove('bar-small', 'bar-medium', 'bar-big');
   document.body.classList.add(`bar-${config.barHeight || 'medium'}`);
   document.documentElement.style.setProperty('--accent', accentColor(config));
 }

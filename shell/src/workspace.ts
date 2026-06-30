@@ -139,14 +139,21 @@ export class Workspace {
     content.appendChild(header);
     content.appendChild(iframe);
 
+    // GridStack expects `content` as HTML string — DOM nodes become "[object HTMLDivElement]".
     this.grid.addWidget({
       id: item.instance_id,
       x: item.x,
       y: item.y,
       w: item.w,
       h: item.h,
-      content,
     });
+
+    const node = this.grid.engine.nodes.find((n) => n.id === item.instance_id);
+    const slot = node?.el?.querySelector('.grid-stack-item-content');
+    if (slot) {
+      slot.innerHTML = '';
+      slot.appendChild(content);
+    }
   }
 
   private async persistLayout(): Promise<void> {
