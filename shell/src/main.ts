@@ -48,6 +48,7 @@ async function boot(): Promise<void> {
     });
 
     document.body.dataset.shellReady = '1';
+    document.getElementById('boot-error')?.remove();
   } finally {
     document.body.classList.remove('booting');
   }
@@ -57,7 +58,7 @@ boot().catch((err) => {
   console.error(err);
   const banner = document.getElementById('boot-error');
   if (banner) {
-    banner.hidden = false;
+    banner.removeAttribute('hidden');
     banner.textContent = `Boot failed: ${err instanceof Error ? err.message : String(err)}`;
   }
 });

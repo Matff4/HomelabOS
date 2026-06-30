@@ -49,7 +49,12 @@ body.booting .workspace-viewport {
   visibility: hidden;
 }
 
-.boot-error {
+.boot-error[hidden] {
+  display: none !important;
+  pointer-events: none;
+}
+
+.boot-error:not([hidden]) {
   position: fixed;
   inset: 0;
   display: grid;
