@@ -65,11 +65,16 @@ def create_app() -> FastAPI:
 
     dist = settings.shell_dist_dir
     if dist and dist.is_dir() and (dist / "index.html").is_file():
-        app.mount("/static", StaticFiles(directory=dist), name="static")
+        assets_dir = dist / "assets"
+        sdk_dir = dist / "sdk"
+        if assets_dir.is_dir():
+            app.mount("/assets", StaticFiles(directory=assets_dir), name="shell_assets")
+        if sdk_dir.is_dir():
+            app.mount("/sdk", StaticFiles(directory=sdk_dir), name="shell_sdk")
 
         @app.get("/")
         async def index():
-            return FileResponse(dist / "index.html")
+            return FileResponse(dist / "index.html", media_type="text/html")
 
         @app.get("/favicon.ico", include_in_schema=False)
         async def favicon():

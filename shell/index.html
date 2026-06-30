@@ -4,6 +4,100 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>HomelabOS</title>
+  <!-- Critical layout: must work even if the Vite CSS bundle fails to load -->
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #11111b;
+      --surface: #1e1e2e;
+      --text: #cdd6f4;
+      --accent: #89b4fa;
+      --border: rgba(137, 180, 250, 0.35);
+      --tb-h: 48px;
+    }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+    .top-bar {
+      flex: 0 0 var(--tb-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: var(--tb-h);
+      padding: 0 14px;
+      background: var(--surface);
+      border-bottom: 2px solid var(--accent);
+      box-sizing: border-box;
+    }
+    .taskbar-left, .taskbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .os-title {
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .workspace-viewport {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .workspace-slider, .widget-stage {
+      width: 100%;
+      height: 100%;
+    }
+    .widget-stage {
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    .widget-panel {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .widget-header {
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+    }
+    .widget-iframe {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      border: 0;
+      background: var(--bg);
+    }
+    .boot-error {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      color: #f38ba8;
+      z-index: 100;
+    }
+    body.booting .workspace-viewport { visibility: hidden; }
+  </style>
 </head>
 <body class="theme-dark booting">
   <div id="boot-error" class="boot-error" hidden></div>

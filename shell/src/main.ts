@@ -9,6 +9,8 @@ function syncViewport(): void {
   const w = Math.max(window.innerWidth || 0, 400);
   document.documentElement.style.setProperty('--vp-h', `${h}px`);
   document.documentElement.style.setProperty('--vp-w', `${w}px`);
+  document.documentElement.style.height = `${h}px`;
+  document.body.style.height = `${h}px`;
 }
 
 async function boot(): Promise<void> {

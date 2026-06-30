@@ -18,7 +18,7 @@ python scripts/generate_schemas.py
 |-------|---------|----------|
 | Core platform | `1.0.0` | `core/__init__.py`, `GET /api/health` |
 | Plugin manifest API | `1` | `manifest.api_version` |
-| Plugin SDK (browser) | `1.0.0` | `sdk/` → `shell/dist/sdk/homelabos-sdk.js` |
+| Plugin SDK (browser) | `1.0.0` | built to `shell/dist/sdk/`, served at `/sdk/homelabos-sdk.js` |
 
 Breaking changes require bumping the relevant version and updating this document.
 
@@ -238,7 +238,7 @@ Widgets run in iframes. The shell holds the SSE connection and relays events via
 
 ## Plugin SDK (browser)
 
-Built to `shell/dist/sdk/homelabos-sdk.js` as global `HomelabOS`.
+Built to `shell/dist/sdk/homelabos-sdk.js`, served at `/sdk/homelabos-sdk.js` as global `HomelabOS`.
 
 ### Frozen surface
 
