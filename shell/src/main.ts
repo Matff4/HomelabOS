@@ -35,6 +35,8 @@ async function boot(): Promise<void> {
       if (!workspace.isEditMode()) workspace.setEditMode(true);
       void workspace.addDemoWidget();
     });
+
+    window.setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
   } finally {
     document.body.classList.remove('booting');
   }

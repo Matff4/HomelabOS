@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --format=iife --global-name=HomelabOS --outfile=../shell/dist/sdk/homelabos-sdk.js"
+    "build": "esbuild src/index.ts --bundle --format=iife --outfile=../shell/dist/sdk/homelabos-sdk.js"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

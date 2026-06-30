@@ -24,17 +24,25 @@
   <script src="/static/sdk/homelabos-sdk.js"></script>
   <script>
     (function () {
+      function api() {
+        if (!window.HomelabOS) return null;
+        return typeof window.HomelabOS.getConfig === 'function'
+          ? window.HomelabOS
+          : window.HomelabOS.HomelabOS || null;
+      }
+
       function boot() {
         var titleEl = document.getElementById('title');
         var cpuEl = document.getElementById('cpu');
-        if (!window.HomelabOS) {
+        var sdk = api();
+        if (!sdk) {
           cpuEl.textContent = 'SDK failed to load';
           return;
         }
-        var cfg = HomelabOS.getConfig();
+        var cfg = sdk.getConfig();
         if (cfg.title) titleEl.textContent = cfg.title;
 
-        HomelabOS.subscribe('system.stats', function (data) {
+        sdk.subscribe('system.stats', function (data) {
           cpuEl.textContent =
             'CPU: ' + Number(data.cpu_percent).toFixed(1) + '% · RAM: ' +
             Number(data.mem_percent).toFixed(1) + '%';

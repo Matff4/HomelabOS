@@ -5,8 +5,9 @@
   --text: #cdd6f4;
   --muted: #a6adc8;
   --accent: #89b4fa;
-  --border: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.12);
   --tb-gap: 8px;
+  --tb-h: 48px;
 }
 
 * {
@@ -17,14 +18,21 @@ html,
 body {
   margin: 0;
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
-  display: flex;
-  flex-direction: column;
 }
+
+body {
+  display: grid;
+  grid-template-rows: var(--tb-h) minmax(0, 1fr);
+}
+
+body.bar-small { --tb-h: 36px; }
+body.bar-big { --tb-h: 64px; }
 
 body.theme-light {
   color-scheme: light;
@@ -32,11 +40,11 @@ body.theme-light {
   --surface: #ffffff;
   --text: #4c4f69;
   --muted: #6c6f85;
-  --border: rgba(0, 0, 0, 0.08);
+  --border: rgba(0, 0, 0, 0.12);
 }
 
 body.booting .workspace-viewport {
-  opacity: 0;
+  visibility: hidden;
 }
 
 .boot-error {
@@ -51,21 +59,20 @@ body.booting .workspace-viewport {
 }
 
 .top-bar {
-  position: relative;
+  grid-row: 1;
   z-index: 20;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--tb-gap);
-  height: 48px;
+  height: var(--tb-h);
   padding: 0 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 
-.top-bar.size-small { height: 36px; font-size: 0.85rem; }
-.top-bar.size-big { height: 64px; font-size: 1.05rem; }
+.top-bar.size-small { font-size: 0.85rem; }
+.top-bar.size-big { font-size: 1.05rem; }
 
 .taskbar-left,
 .taskbar-right {
@@ -97,7 +104,7 @@ body.booting .workspace-viewport {
 .clock {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  color: var(--muted);
+  color: var(--text);
 }
 
 .taskbar-btn {
@@ -123,52 +130,52 @@ body.edit-mode .edit-only {
 }
 
 .workspace-viewport {
-  flex: 1;
+  grid-row: 2;
   min-height: 0;
   overflow: hidden;
-  transition: opacity 0.2s ease;
-}
-
-body.bar-small .workspace-viewport,
-body.bar-medium .workspace-viewport,
-body.bar-big .workspace-viewport {
-  height: auto;
 }
 
 .workspace-slider {
-  display: flex;
   width: 100%;
   height: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
-
-.workspace-slider::-webkit-scrollbar {
-  display: none;
+  overflow: hidden;
 }
 
 .pane-wrapper {
-  flex: 0 0 100%;
   width: 100%;
   height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: stretch;
-  scroll-snap-align: start;
   padding: 5px;
-  box-sizing: border-box;
 }
 
 .grid-stack {
+  position: relative;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
   background: transparent;
-  max-width: 100%;
+}
+
+.grid-stack-item {
+  touch-action: none;
+}
+
+.grid-stack-item-content {
+  inset: 5px !important;
+  overflow: hidden;
+  display: flex !important;
+  flex-direction: column;
+  background: transparent;
+}
+
+.grid-stack-item-content:empty {
+  display: none !important;
 }
 
 .widget-card {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  width: 100%;
   height: 100%;
   min-height: 0;
   background: var(--surface);
@@ -178,6 +185,7 @@ body.bar-big .workspace-viewport {
 }
 
 .widget-header {
+  flex-shrink: 0;
   padding: 4px 8px;
   font-size: 0.75rem;
   color: var(--muted);
@@ -190,17 +198,9 @@ body.edit-mode .widget-header {
 }
 
 .widget-iframe {
-  flex: 1;
+  flex: 1 1 auto;
   width: 100%;
+  min-height: 0;
   border: 0;
-  background: transparent;
-}
-
-.grid-stack-item-content {
-  inset: 2px !important;
-  overflow: hidden;
-}
-
-.grid-stack-item-content:empty {
-  display: none;
+  background: var(--bg);
 }

@@ -12,13 +12,15 @@ export function calculateGridGeometry(config: SystemConfig) {
   const tbHeight = taskbarHeight(config);
   const screenH = window.innerHeight || 280;
   const screenW = window.innerWidth || 1424;
-  const availableH = screenH - tbHeight;
+  const availableH = screenH - tbHeight - 10;
   const gap = 5;
-  const containerW = screenW - gap * 2;
-  const maxCellH = Math.floor((availableH - gap * (GRID_ROWS + 1)) / GRID_ROWS);
-  const maxCellW = Math.floor((containerW - gap * (GRID_COLS + 1)) / GRID_COLS);
-  const cellH = Math.max(20, Math.min(maxCellH, maxCellW));
-  return { cellH, gap, containerW, tbHeight };
+  const cellH = Math.max(
+    20,
+    Math.floor((availableH - gap * (GRID_ROWS + 1)) / GRID_ROWS),
+  );
+  const cellW = Math.floor((screenW - gap * (GRID_COLS + 1) - 10) / GRID_COLS);
+  const cellSize = Math.min(cellH, cellW);
+  return { cellH: cellSize, gap, containerW: screenW, tbHeight, availableH };
 }
 
 export function widgetQuery(config: SystemConfig, instanceId: string): string {

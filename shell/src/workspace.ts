@@ -71,17 +71,18 @@ export class Workspace {
     this.slider.appendChild(wrapper);
 
     const geo = calculateGridGeometry(this.config);
-    gridEl.style.width = `${geo.containerW}px`;
-    gridEl.style.height = `${geo.cellH * GRID_ROWS + geo.gap * (GRID_ROWS + 1)}px`;
+    gridEl.style.width = '100%';
+    gridEl.style.height = '100%';
 
     this.grid = GridStack.init(
       {
         cellHeight: geo.cellH,
         margin: geo.gap,
         column: GRID_COLS,
+        row: GRID_ROWS,
         minRow: GRID_ROWS,
         maxRow: GRID_ROWS,
-        float: true,
+        float: false,
         staticGrid: !this.editMode,
         disableOneColumnMode: true,
       },
@@ -191,8 +192,6 @@ export class Workspace {
   private reflow(): void {
     if (!this.config || !this.grid) return;
     const geo = calculateGridGeometry(this.config);
-    const gridEl = this.slider.querySelector('.grid-stack') as HTMLElement | null;
-    if (gridEl) gridEl.style.width = `${geo.containerW}px`;
     this.grid.cellHeight(geo.cellH);
     this.grid.margin(geo.gap);
   }

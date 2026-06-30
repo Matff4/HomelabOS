@@ -1,16 +1,14 @@
 /**
  * HomelabOS Plugin SDK — iframe widgets (SSE relay via shell postMessage).
+ * Built as IIFE; sets window.HomelabOS (do not use esbuild --global-name).
  */
-import {
+import type {
   HomelabOSPlatform,
   HomelabOSStatic,
   PostMessageType,
-  SDK_VERSION,
   SSERelayPayload,
   Unsubscribe,
 } from './types';
-
-export * from './types';
 
 const ACCENT_MAP: Record<string, string> = {
   blue: '#89b4fa',
@@ -73,47 +71,39 @@ function handleParentMessage(event: MessageEvent): void {
   }
 }
 
-export const HomelabOS: HomelabOSStatic = {
-  version: SDK_VERSION,
-  platform: defaultPlatform,
+function createHomelabOS(): HomelabOSStatic {
+  return {
+    version: '1.0.0',
+    platform: defaultPlatform,
 
-  fetch(url: string, opts?: RequestInit): Promise<Response> {
-    return fetch(url, opts);
-  },
+    fetch(url: string, opts?: RequestInit): Promise<Response> {
+      return fetch(url, opts);
+    },
 
-  subscribe(channel: string, callback: (data: unknown) => void): Unsubscribe {
-    if (!subscriptions.has(channel)) subscriptions.set(channel, new Set());
-    subscriptions.get(channel)!.add(callback);
-    return () => subscriptions.get(channel)?.delete(callback);
-  },
+    subscribe(channel: string, callback: (data: unknown) => void): Unsubscribe {
+      if (!subscriptions.has(channel)) subscriptions.set(channel, new Set());
+      subscriptions.get(channel)!.add(callback);
+      return () => subscriptions.get(channel)?.delete(callback);
+    },
 
-  getConfig(): Record<string, unknown> {
-    return { ...widgetConfig };
-  },
+    getConfig(): Record<string, unknown> {
+      return { ...widgetConfig };
+    },
 
-  async saveConfig(config: Record<string, unknown>): Promise<void> {
-    widgetConfig = { ...config };
-    if (typeof window !== 'undefined' && window.parent !== window) {
-      window.parent.postMessage(
-        { type: 'SAVE_WIDGET_CONFIG', instanceId, config: widgetConfig },
-        '*',
-      );
-    }
-  },
-};
-
-declare global {
-  interface Window {
-    HomelabOS: HomelabOSStatic;
-  }
-}
-
-if (typeof window !== 'undefined') {
-  window.HomelabOS = HomelabOS;
+    async saveConfig(config: Record<string, unknown>): Promise<void> {
+      widgetConfig = { ...config };
+      if (typeof window !== 'undefined' && window.parent !== window) {
+        window.parent.postMessage(
+          { type: 'SAVE_WIDGET_CONFIG', instanceId, config: widgetConfig },
+          '*',
+        );
+      }
+    },
+  };
 }
 
 function sendReady(): void {
-  if (window.parent === window) return;
+  if (typeof window === 'undefined' || window.parent === window) return;
   const height = document.body?.scrollHeight ?? document.documentElement?.scrollHeight ?? 100;
   window.parent.postMessage({ type: 'PLUGIN_READY', height }, '*');
 }
@@ -128,4 +118,13 @@ function initIframeBridge(): void {
   }
 }
 
-initIframeBridge();
+declare global {
+  interface Window {
+    HomelabOS: HomelabOSStatic;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.HomelabOS = createHomelabOS();
+  initIframeBridge();
+}
