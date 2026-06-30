@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # Bump when debugging install issues — printed at runtime so you can verify what ran.
-INSTALLER_REV="2025-06-29-6"
+INSTALLER_REV="2025-06-30"
 INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/Matff4/HomelabOS/refs/heads/master/install.sh"
 
 INSTALL_DIR="/opt/homelabos"
