@@ -17,7 +17,7 @@ import {
   getBrowserViewport,
   gridCapacityKey,
   gridHeight,
-  gridWidth,
+  MIN_CELL,
   taskbarHeight,
   widgetQuery,
 } from './geometry';
@@ -195,7 +195,7 @@ export class Workspace {
       return;
     }
 
-    if (!this.spec || next.cellH !== this.spec.cellH || next.gridPixelW !== this.spec.gridPixelW) {
+    if (!this.spec || next.cellH !== this.spec.cellH) {
       this.applySpecToGrid(next);
     }
   }
@@ -231,7 +231,6 @@ export class Workspace {
     this.gridEl = document.createElement('div');
     this.gridEl.className = 'grid-stack';
     this.gridEl.id = 'workspace-grid';
-    this.applyGridSize(spec);
     stage.appendChild(this.gridEl);
     this.slider.appendChild(stage);
 
@@ -240,7 +239,6 @@ export class Workspace {
         column: spec.cols,
         cellHeight: spec.cellH,
         margin: spec.gap,
-        marginUnit: 'px',
         minRow: spec.rows,
         maxRow: spec.rows,
         float: true,
@@ -251,6 +249,8 @@ export class Workspace {
       },
       this.gridEl,
     );
+
+    this.applyGridSize(spec);
 
     this.grid.on('change', () => {
       if (this.editMode) void this.persistLayout();
@@ -275,30 +275,25 @@ export class Workspace {
 
   private applyGridSize(spec: GridSpec): void {
     if (!this.gridEl) return;
-    this.gridEl.style.width = `${spec.gridPixelW}px`;
+    this.gridEl.style.width = '100%';
+    this.gridEl.style.maxWidth = `${spec.workspaceW}px`;
     this.gridEl.style.height = `${spec.gridPixelH}px`;
   }
 
-  /** Match cellHeight to GridStack's rendered column width so 1×1 tiles are square on the panel. */
+  /** Set cellHeight = column width so 1×1 tiles are square on the actual panel. */
   private syncSquareCellSize(): void {
-    if (!this.grid || !this.spec || !this.gridEl) return;
+    if (!this.grid || !this.spec) return;
 
     const colW = this.grid.cellWidth();
-    if (!colW || colW < 1) return;
+    if (!colW || colW < MIN_CELL - 2) return;
 
     const cell = Math.round(colW);
-    if (cell === this.spec.cellH) return;
+    if (Math.abs(cell - this.spec.cellH) < 1) return;
 
-    const next: GridSpec = {
-      ...this.spec,
-      cellH: cell,
-      gridPixelW: gridWidth(this.spec.cols, cell, this.spec.gap),
-      gridPixelH: gridHeight(this.spec.rows, cell, this.spec.gap),
-    };
-    this.spec = next;
+    this.spec = { ...this.spec, cellH: cell, gridPixelH: gridHeight(this.spec.rows, cell, this.spec.gap) };
     this.grid.cellHeight(cell);
-    this.applyGridSize(next);
-    applyGridSpecToDocument(next);
+    applyGridSpecToDocument(this.spec);
+    if (this.gridEl) this.gridEl.style.height = `${this.spec.gridPixelH}px`;
   }
 
   private applySpecToGrid(spec: GridSpec): void {

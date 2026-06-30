@@ -6,11 +6,10 @@ const BAR_HEIGHT: Record<string, number> = { small: 36, medium: 48, big: 64 };
 export const MIN_CELL = 90;
 export const MAX_CELL = 130;
 const MIN_COLS = 4;
-const MAX_COLS = 24;
-/** Gap between grid cells (must match GridStack margin). */
-export const GRID_GAP = 12;
+const MAX_COLS = 16;
+/** Gap between grid cells (GridStack margin). */
+export const GRID_GAP = 10;
 const WORKSPACE_PAD = 8;
-/** .grid-stage horizontal/vertical padding (one side). */
 const STAGE_PAD = GRID_GAP;
 
 export interface GridCapacity {
@@ -24,7 +23,6 @@ export interface GridSpec extends GridCapacity {
   workspaceW: number;
   workspaceH: number;
   taskbarH: number;
-  gridPixelW: number;
   gridPixelH: number;
 }
 
@@ -46,7 +44,6 @@ export function getBrowserViewport(): { width: number; height: number } {
   };
 }
 
-/** Usable workspace inside shell padding + grid stage padding. */
 export function workspaceDims(
   viewportW: number,
   viewportH: number,
@@ -71,44 +68,52 @@ function rowsThatFit(workspaceH: number, cell: number, gap = GRID_GAP): number {
   return Math.max(1, Math.floor((workspaceH + gap) / (cell + gap)));
 }
 
+/** Max columns that can fit at MIN_CELL on this workspace width. */
+export function maxColsForWorkspace(workspaceW: number): number {
+  const limit = Math.floor((workspaceW + GRID_GAP) / (MIN_CELL + GRID_GAP));
+  return Math.max(MIN_COLS, Math.min(MAX_COLS, limit));
+}
+
 /**
- * Largest integer square cell that fits cols×rows inside workspace.
- * GridStack uses (cols+1) margins horizontally and (rows+1) vertically.
+ * Largest integer square cell for cols×rows, or null if nothing fits in [MIN_CELL, MAX_CELL].
+ * Never clamps up — invalid geometry must be rejected by the caller.
  */
 export function fitSquareCell(
   workspaceW: number,
   workspaceH: number,
   cols: number,
   rows: number,
-): number {
+): number | null {
   const maxFromW = (workspaceW - GRID_GAP * (cols + 1)) / cols;
   const maxFromH = (workspaceH - GRID_GAP * (rows + 1)) / rows;
   let cell = Math.floor(Math.min(maxFromW, maxFromH));
 
-  while (cell > MIN_CELL && gridWidth(cols, cell) > workspaceW) cell -= 1;
-  while (cell > MIN_CELL && gridHeight(rows, cell) > workspaceH) cell -= 1;
+  if (cell > MAX_CELL) cell = MAX_CELL;
+  if (cell < MIN_CELL) return null;
 
-  return Math.max(MIN_CELL, Math.min(MAX_CELL, cell));
+  while (cell >= MIN_CELL && gridWidth(cols, cell) > workspaceW + 0.5) cell -= 1;
+  while (cell >= MIN_CELL && gridHeight(rows, cell) > workspaceH + 0.5) cell -= 1;
+
+  return cell >= MIN_CELL ? cell : null;
 }
 
-/**
- * Physical panel → grid capacity. Square tiles in [MIN_CELL, MAX_CELL]; prefer denser grids.
- */
+/** Physical panel → grid capacity (prefer denser valid layouts). */
 export function computeGridCapacity(
   physicalW: number,
   physicalH: number,
   taskbarH: number,
 ): GridCapacity {
   const { workspaceW, workspaceH } = workspaceDims(physicalW, physicalH, taskbarH);
+  const colLimit = maxColsForWorkspace(workspaceW);
 
-  let best: GridCapacity = { cols: 12, rows: 1 };
+  let best: GridCapacity = { cols: Math.min(12, colLimit), rows: 1 };
   let bestDensity = 0;
 
-  for (let cols = MAX_COLS; cols >= MIN_COLS; cols--) {
+  for (let cols = colLimit; cols >= MIN_COLS; cols--) {
     let rows = rowsThatFit(workspaceH, MIN_CELL);
     while (rows >= 1) {
       const cell = fitSquareCell(workspaceW, workspaceH, cols, rows);
-      if (cell >= MIN_CELL && cell <= MAX_CELL) {
+      if (cell !== null) {
         const density = cols * rows;
         if (density > bestDensity) {
           bestDensity = density;
@@ -122,11 +127,12 @@ export function computeGridCapacity(
 
   if (bestDensity > 0) return best;
 
-  const cols = 12;
-  const rows = rowsThatFit(workspaceH, MIN_CELL);
-  return { cols, rows: Math.max(1, rows) };
+  const cols = Math.min(12, colLimit);
+  const rows = Math.max(1, rowsThatFit(workspaceH, MIN_CELL));
+  return { cols, rows };
 }
 
+/** Render viewport → cell size (cols/rows from physical capacity). */
 export function computeGridSpec(
   capacity: GridCapacity,
   renderW: number,
@@ -134,7 +140,10 @@ export function computeGridSpec(
   taskbarH: number,
 ): GridSpec {
   const { workspaceW, workspaceH } = workspaceDims(renderW, renderH, taskbarH);
-  const cell = fitSquareCell(workspaceW, workspaceH, capacity.cols, capacity.rows);
+  const cell =
+    fitSquareCell(workspaceW, workspaceH, capacity.cols, capacity.rows) ??
+    fitSquareCell(workspaceW, workspaceH, capacity.cols, 1) ??
+    MIN_CELL;
 
   return {
     cols: capacity.cols,
@@ -144,7 +153,6 @@ export function computeGridSpec(
     workspaceW,
     workspaceH,
     taskbarH,
-    gridPixelW: gridWidth(capacity.cols, cell),
     gridPixelH: gridHeight(capacity.rows, cell),
   };
 }
@@ -166,7 +174,7 @@ export function applyGridSpecToDocument(spec: GridSpec): void {
   document.documentElement.style.setProperty('--grid-rows', String(spec.rows));
   document.documentElement.style.setProperty('--grid-cell-h', `${spec.cellH}px`);
   document.documentElement.style.setProperty('--grid-gap', `${spec.gap}px`);
-  document.documentElement.style.setProperty('--grid-pixel-w', `${spec.gridPixelW}px`);
+  document.documentElement.style.setProperty('--grid-workspace-w', `${spec.workspaceW}px`);
   document.documentElement.style.setProperty('--grid-pixel-h', `${spec.gridPixelH}px`);
 }
 
