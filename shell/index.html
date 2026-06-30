@@ -101,6 +101,7 @@
       z-index: 100;
     }
     body.booting .workspace-viewport { visibility: hidden; }
+    #modal-root[hidden] { display: none !important; }
   </style>
 </head>
 <body class="theme-dark booting">
@@ -109,6 +110,7 @@
   <main class="workspace-viewport" id="workspace-viewport">
     <div class="workspace-slider" id="workspace-slider"></div>
   </main>
+  <div id="modal-root" hidden></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

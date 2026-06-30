@@ -11,7 +11,13 @@ export class Taskbar {
     config: SystemConfig,
   ) {
     this.config = config;
-    this.root.className = `top-bar size-${config.barHeight}`;
+    this.render();
+    this.startClock();
+    this.bindSseStatus();
+  }
+
+  private render(): void {
+    this.root.className = `top-bar size-${this.config.barHeight}`;
     this.root.innerHTML = `
       <div class="taskbar-left">
         <span class="os-title">HomelabOS</span>
@@ -20,21 +26,34 @@ export class Taskbar {
       <div class="taskbar-right">
         <div class="stat-badge" id="stat-cpu">CPU --%</div>
         <div class="stat-badge" id="stat-ram">RAM --</div>
-        <button type="button" class="taskbar-btn edit-only" id="btn-add-widget" title="Add demo widget">+</button>
+        <button type="button" class="taskbar-btn edit-only" id="btn-add" title="Add widget">+</button>
         <button type="button" class="taskbar-btn" id="btn-edit" title="Edit layout">Edit</button>
+        <button type="button" class="taskbar-btn" id="btn-settings" title="Settings">Settings</button>
+        <button type="button" class="taskbar-btn" id="btn-power" title="Power">Power</button>
         <div class="clock" id="clock">--:--</div>
       </div>
     `;
-    this.startClock();
-    this.bindSseStatus();
+  }
+
+  updateConfig(config: SystemConfig): void {
+    this.config = config;
+    this.root.className = `top-bar size-${config.barHeight}`;
   }
 
   onAddWidget(handler: () => void): void {
-    this.root.querySelector('#btn-add-widget')?.addEventListener('click', handler);
+    this.root.querySelector('#btn-add')?.addEventListener('click', handler);
   }
 
   onEditToggle(handler: () => void): void {
     this.root.querySelector('#btn-edit')?.addEventListener('click', handler);
+  }
+
+  onSettings(handler: () => void): void {
+    this.root.querySelector('#btn-settings')?.addEventListener('click', handler);
+  }
+
+  onPower(handler: () => void): void {
+    this.root.querySelector('#btn-power')?.addEventListener('click', handler);
   }
 
   setEditActive(active: boolean): void {

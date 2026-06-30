@@ -40,7 +40,11 @@ def collect_system_stats() -> SystemStats:
 
 def detect_display(*, mock_hal: bool) -> DisplayInfo:
     if mock_hal:
-        return DisplayInfo(width=1424, height=280, kiosk=False)
+        width = int(os.environ.get("HOMELABOS_DISPLAY_WIDTH", "0"))
+        height = int(os.environ.get("HOMELABOS_DISPLAY_HEIGHT", "0"))
+        if width > 0 and height > 0:
+            return DisplayInfo(width=width, height=height, kiosk=False)
+        return DisplayInfo(width=1920, height=1080, kiosk=False)
 
     width = int(os.environ.get("HOMELABOS_DISPLAY_WIDTH", "0"))
     height = int(os.environ.get("HOMELABOS_DISPLAY_HEIGHT", "0"))

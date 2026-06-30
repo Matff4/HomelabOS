@@ -1,4 +1,5 @@
-import type { ComponentInfo, LayoutItem, SSEMessage, SystemConfig } from './types';
+import type { ComponentInfo, DisplayInfo, LayoutItem, SSEMessage, SystemConfig } from './types';
+import type { GridCapacity } from './geometry';
 
 const ACCENT: Record<string, string> = {
   blue: '#89b4fa',
@@ -33,6 +34,22 @@ export async function saveLayout(layout: LayoutItem[]): Promise<void> {
 export async function fetchComponents(): Promise<ComponentInfo[]> {
   const res = await fetch('/api/components');
   if (!res.ok) throw new Error('Failed to load components');
+  return res.json();
+}
+
+export async function fetchDisplay(): Promise<DisplayInfo> {
+  const res = await fetch('/api/system/display');
+  if (!res.ok) throw new Error('Failed to load display info');
+  return res.json();
+}
+
+export async function saveConfig(config: SystemConfig): Promise<SystemConfig> {
+  const res = await fetch('/api/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) throw new Error('Failed to save config');
   return res.json();
 }
 
@@ -103,20 +120,24 @@ export class ShellSSE {
 
 export const shellSSE = new ShellSSE();
 
-export async function ensureDemoLayout(components: ComponentInfo[]): Promise<LayoutItem[]> {
+export async function ensureDemoLayout(
+  components: ComponentInfo[],
+  capacity: GridCapacity,
+): Promise<LayoutItem[]> {
   const layout = await fetchLayout();
   if (layout.length > 0) return layout;
 
   const demo = components.find((c) => c.id === 'demo_widget');
   if (!demo) return layout;
 
+  const size = demo.size ?? { w: 3, h: 1 };
   const seeded: LayoutItem = {
     instance_id: `inst_${Date.now()}`,
     component_id: demo.id,
     x: 0,
     y: 0,
-    w: 12,
-    h: 2,
+    w: Math.min(size.w, capacity.cols),
+    h: Math.min(size.h, capacity.rows),
     pane: 0,
     config: { title: 'HomelabOS' },
   };
