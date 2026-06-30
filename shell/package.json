@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build:sdk": "npm --prefix ../sdk install && npm --prefix ../sdk run build",
+    "build": "vite build && npm run build:sdk",
     "preview": "vite preview"
+  },
+  "dependencies": {
+    "gridstack": "^11.0.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

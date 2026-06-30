@@ -47,8 +47,16 @@ pytest
 
 ```bash
 cd shell && npm install && npm run dev
-# Proxies /api to :8000
+# Proxies /api and /apps to :8000
 ```
+
+Production build (also builds plugin SDK into `shell/dist/sdk/`):
+
+```bash
+cd shell && npm install && npm run build
+```
+
+After deploy (`homelabos-update`), the kiosk serves the built shell from `/`.
 
 ## Fresh Pi install (production)
 

@@ -86,6 +86,10 @@ def test_demo_plugin(client_with_demo):
     assert len(plugins.json()) == 1
     assert plugins.json()[0]["id"] == "demo"
 
+    components = client_with_demo.get("/api/components")
+    assert components.status_code == 200
+    assert any(row["id"] == "demo_widget" for row in components.json())
+
     health = client_with_demo.get("/api/plugins/demo/health")
     assert health.status_code == 200
     assert health.json()["status"] == "ok"

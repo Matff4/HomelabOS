@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from core.models.api import PluginHealth, PluginInstallRequest, PluginSummary
+from core.models.api import ComponentInfo, PluginHealth, PluginInstallRequest, PluginSummary
 from core.plugins.loader import get_plugin_manager
 from core.settings import settings
 
@@ -10,6 +10,11 @@ router = APIRouter(tags=["plugins"])
 def _manager():
     assert settings.apps_dir
     return get_plugin_manager(settings.apps_dir)
+
+
+@router.get("/api/components")
+async def list_components() -> list[ComponentInfo]:
+    return [ComponentInfo.model_validate(row) for row in _manager().components()]
 
 
 @router.get("/api/plugins")

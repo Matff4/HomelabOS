@@ -43,12 +43,12 @@ homelabos/
 - [x] pytest from day one
 
 ### Phase 2 — Shell (~1–2 weeks)
-- Vite + TypeScript
-- **Single SSE connection** → postMessage relay to widget iframes
-- GridStack workspace (multi-pane, edit mode)
-- Taskbar via SSE (no polling)
-- Modals: settings, power, confirm, widget config
-- Display-aware grid geometry
+- [x] Vite + TypeScript (initial shell — taskbar, workspace, demo widget)
+- [x] Single SSE connection → postMessage relay to widget iframes
+- [ ] GridStack workspace (multi-pane, edit mode) — single pane + edit mode sketch
+- [x] Taskbar via SSE (no polling)
+- [ ] Modals: settings, power, confirm, widget config
+- [x] Display-aware grid geometry (basic)
 
 ### Phase 3 — SDK + Plugin Template (~3–4 days)
 - `homelabos-sdk` package

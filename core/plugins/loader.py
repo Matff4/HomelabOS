@@ -107,6 +107,26 @@ class PluginManager:
             for plugin in self.plugins.values()
         ]
 
+    def components(self) -> list[dict]:
+        rows: list[dict] = []
+        for plugin in self.plugins.values():
+            for component in plugin.manifest.components:
+                if component.type not in ("widget", "app"):
+                    continue
+                rows.append(
+                    {
+                        "id": component.id,
+                        "plugin_id": plugin.manifest.id,
+                        "type": component.type,
+                        "name": component.name,
+                        "icon": component.icon,
+                        "entry_url": f"/apps/{plugin.manifest.id}/{component.entry}",
+                        "size": component.size.model_dump() if component.size else None,
+                        "min_size": component.min_size.model_dump() if component.min_size else None,
+                    }
+                )
+        return rows
+
     def health(self, plugin_id: str) -> dict:
         plugin = self.plugins.get(plugin_id)
         if plugin is None:

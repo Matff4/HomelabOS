@@ -73,6 +73,8 @@ Base URL on device: `http://<pi-ip>:8000`
 
 #### `GET /api/events` — Server-Sent Events (see envelope below)
 
+#### `GET /api/components` → `ComponentInfo[]`
+
 #### `GET /api/plugins` → `PluginSummary[]`
 
 #### `GET /api/plugins/{id}/health` → `PluginHealth`

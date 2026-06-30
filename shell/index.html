@@ -4,27 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>HomelabOS</title>
-  <style>
-    :root { color-scheme: dark; --bg: #1e1e2e; --text: #cdd6f4; --accent: #89b4fa; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; min-height: 100vh; display: grid; place-items: center;
-      background: var(--bg); color: var(--text); font-family: system-ui, sans-serif;
-    }
-    .card {
-      text-align: center; padding: 2rem; border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.08); max-width: 420px;
-    }
-    h1 { color: var(--accent); margin: 0 0 0.5rem; font-size: 1.5rem; }
-    p { opacity: 0.8; line-height: 1.5; }
-    code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; }
-  </style>
 </head>
-<body>
-  <div class="card">
-    <h1>HomelabOS</h1>
-    <p>Shell placeholder. Full UI coming in Phase 2.</p>
-    <p>API: <code>/api/health</code></p>
-  </div>
+<body class="theme-dark booting">
+  <div id="boot-error" class="boot-error" hidden></div>
+  <header class="top-bar size-medium" id="taskbar"></header>
+  <main class="workspace-viewport" id="workspace-viewport">
+    <div class="workspace-slider" id="workspace-slider"></div>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
