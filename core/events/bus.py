@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class EventBus:
     def __init__(self) -> None:
-        self._clients: list[asyncio.Queue[str]] = []
+        self._clients: list[asyncio.Queue[str | None]] = []
         self._running = True
 
     @property
@@ -31,16 +31,18 @@ class EventBus:
             await client.put(payload)
 
     async def subscribe(self) -> AsyncIterator[str]:
-        queue: asyncio.Queue[str] = asyncio.Queue()
+        queue: asyncio.Queue[str | None] = asyncio.Queue()
         self._clients.append(queue)
         logger.info("SSE client connected (%s total)", len(self._clients))
         try:
             while self._running:
                 try:
                     msg = await asyncio.wait_for(queue.get(), timeout=1.0)
-                    yield f"data: {msg}\n\n"
                 except asyncio.TimeoutError:
                     continue
+                if msg is None:
+                    break
+                yield f"data: {msg}\n\n"
         finally:
             if queue in self._clients:
                 self._clients.remove(queue)
@@ -48,6 +50,11 @@ class EventBus:
 
     def stop(self) -> None:
         self._running = False
+        for client in list(self._clients):
+            try:
+                client.put_nowait(None)
+            except asyncio.QueueFull:
+                pass
 
 
 _bus: EventBus | None = None

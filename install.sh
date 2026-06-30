@@ -136,7 +136,6 @@ echo "    user   : $SERVICE_USER (uid $SERVICE_UID)"
 echo "    ip     : $LOCAL_IP"
 echo "    target : $INSTALL_DIR"
 echo ""
-echo "    Tip: if SSH drops, re-run the same install command."
 
 # ── System packages ───────────────────────────────────────────────────────────
 echo "==> [1/7] System packages..."
@@ -255,6 +254,7 @@ EnvironmentFile=$ENV_FILE
 ExecStart=$INSTALL_DIR/.venv/bin/python -m core
 Restart=on-failure
 RestartSec=3
+TimeoutStopSec=15
 
 [Install]
 WantedBy=multi-user.target
