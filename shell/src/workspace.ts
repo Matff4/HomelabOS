@@ -16,6 +16,8 @@ import {
   applyGridSpecToDocument,
   getBrowserViewport,
   gridCapacityKey,
+  gridHeight,
+  gridWidth,
   taskbarHeight,
   widgetQuery,
 } from './geometry';
@@ -229,6 +231,7 @@ export class Workspace {
     this.gridEl = document.createElement('div');
     this.gridEl.className = 'grid-stack';
     this.gridEl.id = 'workspace-grid';
+    this.applyGridSize(spec);
     stage.appendChild(this.gridEl);
     this.slider.appendChild(stage);
 
@@ -237,6 +240,7 @@ export class Workspace {
         column: spec.cols,
         cellHeight: spec.cellH,
         margin: spec.gap,
+        marginUnit: 'px',
         minRow: spec.rows,
         maxRow: spec.rows,
         float: true,
@@ -265,15 +269,47 @@ export class Workspace {
       const component = this.components.get(item.component_id);
       if (component) this.mountWidget(item, component);
     });
+
+    requestAnimationFrame(() => this.syncSquareCellSize());
+  }
+
+  private applyGridSize(spec: GridSpec): void {
+    if (!this.gridEl) return;
+    this.gridEl.style.width = `${spec.gridPixelW}px`;
+    this.gridEl.style.height = `${spec.gridPixelH}px`;
+  }
+
+  /** Match cellHeight to GridStack's rendered column width so 1×1 tiles are square on the panel. */
+  private syncSquareCellSize(): void {
+    if (!this.grid || !this.spec || !this.gridEl) return;
+
+    const colW = this.grid.cellWidth();
+    if (!colW || colW < 1) return;
+
+    const cell = Math.round(colW);
+    if (cell === this.spec.cellH) return;
+
+    const next: GridSpec = {
+      ...this.spec,
+      cellH: cell,
+      gridPixelW: gridWidth(this.spec.cols, cell, this.spec.gap),
+      gridPixelH: gridHeight(this.spec.rows, cell, this.spec.gap),
+    };
+    this.spec = next;
+    this.grid.cellHeight(cell);
+    this.applyGridSize(next);
+    applyGridSpecToDocument(next);
   }
 
   private applySpecToGrid(spec: GridSpec): void {
     this.spec = spec;
     applyGridSpecToDocument(spec);
+    this.applyGridSize(spec);
     if (!this.grid) return;
     this.grid.column(spec.cols);
     this.grid.cellHeight(spec.cellH);
     this.grid.margin(spec.gap);
+    requestAnimationFrame(() => this.syncSquareCellSize());
   }
 
   private mountWidget(item: LayoutItem, component: ComponentInfo): void {

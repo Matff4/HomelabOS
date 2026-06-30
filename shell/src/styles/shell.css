@@ -265,14 +265,19 @@ body.edit-mode .edit-only-btn {
 }
 
 .grid-stack {
+  flex: 0 0 auto;
   width: var(--grid-pixel-w, 100%);
-  height: var(--grid-pixel-h, 100%);
-  max-width: 100%;
+  height: var(--grid-pixel-h, auto);
+  min-width: 0;
   background: transparent;
 }
 
+/* Let GridStack position items with margin — do not force content to ignore gaps */
+.grid-stack-item {
+  box-sizing: border-box;
+}
+
 .grid-stack-item-content {
-  inset: 0 !important;
   overflow: hidden;
   border-radius: 12px;
   border: 1px solid var(--border);
