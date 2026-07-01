@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo Widget</title>
+  <style>
+    :root { color-scheme: dark; --accent: #89b4fa; --text: #cdd6f4; --muted: #a6adc8; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+      background: transparent;
+      color: var(--text);
+    }
+    body { padding: 8px 10px; }
+    body[data-kiosk="true"] h2 { display: none; }
+    h2 { margin: 0 0 8px; font-size: 0.95rem; color: var(--accent); }
+    .metric { font-size: 1.35rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .sub { margin-top: 4px; font-size: 0.8rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <h2 id="title">System Stats</h2>
+  <div class="metric" id="cpu">—</div>
+  <div class="sub" id="ram">Waiting for stats…</div>
+  <script src="/sdk/homelabos-sdk.js"></script>
+  <script>
+    (function () {
+      function api() {
+        if (!window.HomelabOS) return null;
+        return typeof window.HomelabOS.getConfig === 'function'
+          ? window.HomelabOS
+          : window.HomelabOS.HomelabOS || null;
+      }
+      function boot() {
+        if (new URLSearchParams(location.search).get('kiosk') === 'true') {
+          document.body.dataset.kiosk = 'true';
+        }
+        var sdk = api();
+        if (!sdk) return;
+        var cfg = sdk.getConfig();
+        if (cfg.title) document.getElementById('title').textContent = cfg.title;
+        sdk.subscribe('system.stats', function (data) {
+          document.getElementById('cpu').textContent =
+            Number(data.cpu_percent).toFixed(1) + '% CPU';
+          document.getElementById('ram').textContent =
+            'RAM ' + Number(data.mem_percent).toFixed(1) + '% · uptime ' +
+            Math.floor(Number(data.uptime_seconds) / 3600) + 'h';
+        });
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+      else boot();
+    })();
+  </script>
+</body>
+</html>

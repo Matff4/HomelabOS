@@ -13,7 +13,10 @@ homelabos/                    # Platform (this repo)
 ├── core/                     # Python platform (FastAPI)
 ├── shell/                    # TypeScript kiosk UI (Vite)
 ├── sdk/                      # Plugin SDK (built → shell/dist/sdk/)
-├── apps/demo/                # Reference plugin (bundled, hidden from store/drawer)
+├── apps/demo-widget/         # Reference widget plugin (bundled)
+├── apps/demo-buttons/        # Reference action plugin — momentary + toggle
+├── apps/demo-app/            # Reference fullscreen app plugin
+├── apps/demo/                # Legacy reference (hidden from store/drawer)
 ├── schemas/                  # JSON Schema for manifest, layout, config
 ├── data/                     # Runtime JSON (gitignored contents)
 ├── scripts/                  # install.sh, dev helpers, systemd templates
@@ -105,6 +108,7 @@ Core stays stable; plugins move fast without breaking the kiosk.
 
 ### Phase 6 — Plugin content (next) ← **current**
 - [x] HomelabOS-Plugins repo v0.1 — catalog + **uptime** widget
+- [x] Bundled reference plugins: `demo-widget`, `demo-buttons` (momentary + toggle), `demo-app`
 - [ ] Reference plugin beyond demo (GPIO, read-only PVE, …)
 - [ ] PVE integration (full)
 - [ ] ESXi, fan control, and community plugins
@@ -116,6 +120,22 @@ Core stays stable; plugins move fast without breaking the kiosk.
 - [x] `data/` backup tarball
 - [ ] Pre-baked image deps (no runtime pip on device)
 - [ ] Performance: off-screen iframe detach, kiosk taskbar blur removal
+
+### Phase 8 — Screensaver & display power (planned)
+
+Idle display management for 24/7 kiosk panels — reduce burn-in, power, and backlight wear without losing instant wake on touch.
+
+- [ ] **DDC/CI autodiscovery** — probe HDMI-attached displays over I²C (built into many panels); detect VCP feature support (power, backlight, contrast)
+- [ ] **Display power off** — on idle timeout, send DDC/CI `VCP 0xD6` (power mode: off) when supported; fall back to shell blank overlay when not
+- [ ] **Wake on touch** — any pointer/keyboard activity dismisses screensaver and restores prior power/backlight state
+- [ ] **Gradual dimming** — idle stages: normal → dimmed backlight (DDC/CI `0x10`) → blank overlay → display off
+- [ ] **Configurable idle timeout** — per-device setting in config (minutes); optional night schedule (e.g. force off 23:00–07:00)
+- [ ] **Burn-in mitigation** — optional pixel-shift or subtle UI drift while idle (before full off)
+- [ ] **Per-display profiles** — remember discovered EDID/DDC capabilities in `data/display-profiles.json`
+- [ ] **Manual override** — taskbar quick action: dim / off / wake; respect override until next idle cycle
+- [ ] **QoL** — show clock on dimmed overlay; suppress widget SSE relay while fully off; restore layout without reload
+
+Implementation notes: Linux `ddcutil` or direct `/dev/i2c-*` on Pi HDMI; HAL service in core; shell idle timer + fullscreen screensaver layer; settings UI in power modal.
 
 ---
 
@@ -160,6 +180,7 @@ HomelabOS.version / .platform   // includes coreVersion, pluginApiVersion, sdkVe
 HomelabOS.fetch(url, opts)
 HomelabOS.subscribe(channel, fn)
 HomelabOS.getConfig() / .saveConfig(obj)
+HomelabOS.closeApp()            // fullscreen apps
 ```
 
 ## Current sprint

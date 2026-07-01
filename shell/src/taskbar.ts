@@ -99,10 +99,36 @@ export class Taskbar {
         return `<button type="button" class="taskbar-btn taskbar-action-btn" data-action-id="${id}" title="${component.name} (${mode})">${icon(glyph)}</button>`;
       })
       .join('');
+    void this.syncActionStates();
   }
 
   getComponent(id: string): ComponentInfo | undefined {
     return this.components.get(id);
+  }
+
+  setActionActive(componentId: string, active: boolean): void {
+    const btn = this.root.querySelector(`[data-action-id="${componentId}"]`);
+    btn?.classList.toggle('active', active);
+  }
+
+  async syncActionStates(): Promise<void> {
+    const ids = this.config.taskbarActions ?? [];
+    await Promise.all(
+      ids.map(async (id) => {
+        const component = this.components.get(id);
+        if (!component || component.type !== 'action' || component.action_mode !== 'toggle') return;
+        try {
+          const res = await fetch(
+            `/api/plugins/${encodeURIComponent(component.plugin_id)}/action/${encodeURIComponent(id)}/state`,
+          );
+          if (!res.ok) return;
+          const body = (await res.json()) as { active?: boolean };
+          this.setActionActive(id, Boolean(body.active));
+        } catch {
+          /* optional endpoint */
+        }
+      }),
+    );
   }
 
   onActionClick(handler: (componentId: string) => void): void {

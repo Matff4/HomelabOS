@@ -23,6 +23,7 @@ export interface HomelabOSStatic {
   subscribe(channel: string, callback: (data: unknown) => void): Unsubscribe;
   getConfig(): Record<string, unknown>;
   saveConfig(config: Record<string, unknown>): Promise<void>;
+  closeApp(): void;
 }
 
 export type PostMessageType =
@@ -31,7 +32,8 @@ export type PostMessageType =
   | 'WIDGET_CONFIG'
   | 'WIDGET_CONFIG_UPDATE'
   | 'SAVE_WIDGET_CONFIG'
-  | 'SSE_RELAY';
+  | 'SSE_RELAY'
+  | 'CLOSE_APP';
 
 export interface SSERelayPayload {
   channel: string;

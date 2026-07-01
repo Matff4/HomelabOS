@@ -1,0 +1,26 @@
+{
+  "id": "demo-widget",
+  "name": "Demo Widget",
+  "version": "1.0.0",
+  "api_version": 1,
+  "backend": "main.py",
+  "components": [
+    {
+      "id": "demo_widget_panel",
+      "type": "widget",
+      "name": "System Stats",
+      "icon": "monitoring",
+      "entry": "src/widget.html",
+      "size": { "w": 2, "h": 2 },
+      "min_size": { "w": 2, "h": 1 },
+      "settings": [
+        {
+          "key": "title",
+          "label": "Widget title",
+          "type": "text",
+          "default": "System Stats"
+        }
+      ]
+    }
+  ]
+}

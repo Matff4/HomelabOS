@@ -27,6 +27,7 @@ def test_frozen_post_message_types():
         "WIDGET_CONFIG_UPDATE",
         "SAVE_WIDGET_CONFIG",
         "SSE_RELAY",
+        "CLOSE_APP",
     }
     actual = {
         PostMessageType.PLUGIN_READY,
@@ -35,6 +36,7 @@ def test_frozen_post_message_types():
         PostMessageType.WIDGET_CONFIG_UPDATE,
         PostMessageType.SAVE_WIDGET_CONFIG,
         PostMessageType.SSE_RELAY,
+        PostMessageType.CLOSE_APP,
     }
     assert actual == expected
 

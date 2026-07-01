@@ -266,6 +266,7 @@ Widgets run in iframes. The shell holds the SSE connection and relays events via
 | `WIDGET_CONFIG_UPDATE` | shell → iframe | `{ config }` |
 | `SAVE_WIDGET_CONFIG` | iframe → shell | `{ instanceId, config }` |
 | `SSE_RELAY` | shell → iframe | `{ channel, data, ts? }` |
+| `CLOSE_APP` | iframe → shell | _(none — closes fullscreen app overlay)_ |
 
 ---
 
@@ -282,6 +283,7 @@ HomelabOS.fetch(url, opts) // authenticated fetch to same origin
 HomelabOS.subscribe(ch, fn) // SSE callback (relayed in iframes)
 HomelabOS.getConfig()      // per-instance widget config
 HomelabOS.saveConfig(obj)  // persist via shell postMessage
+HomelabOS.closeApp()       // close fullscreen app overlay (apps only)
 ```
 
 Implemented in `sdk/src/`, built to `shell/dist/sdk/homelabos-sdk.js`. Author guide: [PLUGIN_AUTHOR.md](PLUGIN_AUTHOR.md).

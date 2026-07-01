@@ -103,6 +103,12 @@ function createHomelabOS(): HomelabOSStatic {
         );
       }
     },
+
+    closeApp(): void {
+      if (typeof window !== 'undefined' && window.parent !== window) {
+        window.parent.postMessage({ type: 'CLOSE_APP' }, '*');
+      }
+    },
   };
 }
 

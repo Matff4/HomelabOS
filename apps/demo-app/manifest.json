@@ -1,0 +1,16 @@
+{
+  "id": "demo-app",
+  "name": "Demo App",
+  "version": "1.0.0",
+  "api_version": 1,
+  "backend": "main.py",
+  "components": [
+    {
+      "id": "demo_app_panel",
+      "type": "app",
+      "name": "About HomelabOS",
+      "icon": "open_in_full",
+      "entry": "src/app.html"
+    }
+  ]
+}

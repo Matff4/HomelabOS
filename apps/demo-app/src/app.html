@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo App</title>
+  <style>
+    :root { color-scheme: dark; --accent: #89b4fa; --text: #cdd6f4; --muted: #a6adc8; --surface: #313244; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+      background: var(--bg, #1e1e2e);
+      color: var(--text);
+    }
+    .wrap {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .card {
+      width: min(480px, 100%);
+      padding: 24px;
+      border-radius: 16px;
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    h1 { margin: 0 0 8px; font-size: 1.4rem; color: var(--accent); }
+    p { margin: 0 0 12px; color: var(--muted); line-height: 1.5; }
+    .meta { font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+    button {
+      margin-top: 16px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #11111b;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Fullscreen app</h1>
+      <p>This panel fills the workspace below the taskbar. Apps are for settings, wizards, or any UI that needs more space than a grid widget.</p>
+      <p class="meta" id="platform">Loading platform info…</p>
+      <p class="meta" id="api">Loading plugin API…</p>
+      <button type="button" id="close">Close app</button>
+    </div>
+  </div>
+  <script src="/sdk/homelabos-sdk.js"></script>
+  <script>
+    (function () {
+      function api() {
+        if (!window.HomelabOS) return null;
+        return typeof window.HomelabOS.getConfig === 'function'
+          ? window.HomelabOS
+          : window.HomelabOS.HomelabOS || null;
+      }
+      function boot() {
+        var sdk = api();
+        if (!sdk) return;
+        var p = sdk.platform;
+        document.getElementById('platform').textContent =
+          'Core ' + p.coreVersion + ' · API v' + p.pluginApiVersion + ' · SDK ' + p.sdkVersion;
+        sdk.fetch('/api/plugins/demo-app/info')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            document.getElementById('api').textContent = data.message || 'API ok';
+          })
+          .catch(function () {
+            document.getElementById('api').textContent = 'API unreachable';
+          });
+        document.getElementById('close').addEventListener('click', function () {
+          if (typeof sdk.closeApp === 'function') sdk.closeApp();
+        });
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+      else boot();
+    })();
+  </script>
+</body>
+</html>

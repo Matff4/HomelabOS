@@ -1,9 +1,10 @@
 import type { ComponentInfo, PlatformInfo, SystemConfig } from './types';
-import { accentColor } from './api';
+import { accentColor, shellSSE } from './api';
 import { widgetQuery } from './geometry';
 import { icon, icons } from './icons';
 
 let overlayEl: HTMLElement | null = null;
+let messageHandler: ((event: MessageEvent) => void) | null = null;
 
 export function openAppOverlay(
   component: ComponentInfo,
@@ -30,9 +31,12 @@ export function openAppOverlay(
   document.body.appendChild(overlayEl);
   document.body.classList.add('app-open');
 
+  const iframe = overlayEl.querySelector('iframe') as HTMLIFrameElement;
+
   overlayEl.querySelector('.app-overlay-close')?.addEventListener('click', closeAppOverlay);
-  overlayEl.querySelector('iframe')?.addEventListener('load', (event) => {
-    const iframe = event.target as HTMLIFrameElement;
+
+  iframe.addEventListener('load', () => {
+    shellSSE.registerIframe(iframe);
     iframe.contentWindow?.postMessage(
       {
         type: 'OS_THEME_UPDATE',
@@ -42,9 +46,18 @@ export function openAppOverlay(
       '*',
     );
   });
+
+  if (!messageHandler) {
+    messageHandler = (event: MessageEvent) => {
+      if (event.data?.type === 'CLOSE_APP') closeAppOverlay();
+    };
+    window.addEventListener('message', messageHandler);
+  }
 }
 
 export function closeAppOverlay(): void {
+  const iframe = overlayEl?.querySelector('iframe') as HTMLIFrameElement | null;
+  if (iframe) shellSSE.unregisterIframe(iframe);
   overlayEl?.remove();
   overlayEl = null;
   document.body.classList.remove('app-open');

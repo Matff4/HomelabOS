@@ -1,0 +1,25 @@
+{
+  "id": "demo-buttons",
+  "name": "Demo Buttons",
+  "version": "1.0.0",
+  "api_version": 1,
+  "backend": "main.py",
+  "components": [
+    {
+      "id": "demo_pulse",
+      "type": "action",
+      "name": "Pulse",
+      "icon": "touch_app",
+      "entry": "src/action.html",
+      "action_mode": "momentary"
+    },
+    {
+      "id": "demo_lamp",
+      "type": "action",
+      "name": "Lamp",
+      "icon": "lightbulb",
+      "entry": "src/action.html",
+      "action_mode": "toggle"
+    }
+  ]
+}

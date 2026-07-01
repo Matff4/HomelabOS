@@ -93,6 +93,7 @@ async function boot(): Promise<void> {
               Object.assign(config, saved);
               taskbar.updateConfig(saved);
               showToast(`${component.name} added to taskbar`, 'success');
+              void taskbar.syncActionStates();
             })();
           },
         });
@@ -102,20 +103,23 @@ async function boot(): Promise<void> {
       const component = taskbar.getComponent(componentId);
       if (!component) return;
       const mode = component.action_mode === 'toggle' ? 'toggle' : 'momentary';
-      void fetch(`/api/plugins/${component.plugin_id}/action/${component.id}`, {
+      void fetch(`/api/plugins/${encodeURIComponent(component.plugin_id)}/action/${encodeURIComponent(component.id)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode }),
       })
         .then((res) => {
           if (!res.ok) throw new Error('Action failed');
-          return res.json() as Promise<{ ok?: boolean; state?: string }>;
+          return res.json() as Promise<{ ok?: boolean; state?: string; active?: boolean }>;
         })
         .then((body) => {
+          if (component.action_mode === 'toggle') {
+            taskbar.setActionActive(componentId, Boolean(body.active));
+          }
           const detail = body.state ? ` (${body.state})` : '';
           showToast(`${component.name}${detail}`, 'success');
         })
-        .catch(() => showToast(`${component.name}: not wired yet`, 'info'));
+        .catch(() => showToast(`${component.name}: action failed`, 'error'));
     });
     taskbar.onPanePrev(() => workspace.prevPane());
     taskbar.onPaneNext(() => workspace.nextPane());

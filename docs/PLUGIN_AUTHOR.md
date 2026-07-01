@@ -79,14 +79,75 @@ Validated against `PluginManifest` (`core/models/manifest.py`). Minimal example:
 | `requires.core` | Optional minimum core semver (enforced on install in Phase 4) |
 | `dependencies` | Other plugin ids (future) |
 | `components[].id` | Globally unique across all plugins |
-| `components[].type` | `widget`, `app`, or `action` (shell drawer lists `widget` and `app`) |
+| `components[].type` | `widget`, `app`, or `action` — see [Component types](#component-types) |
 | `components[].entry` | HTML path relative to plugin root |
 | `components[].icon` | Material Symbols name (see shell taskbar) |
-| `components[].size` | Default grid footprint when added from drawer |
-| `components[].min_size` | Minimum w×h in edit mode |
-| `components[].settings` | Declarative fields (future form UI; use JSON config modal today) |
+| `components[].size` | Default grid footprint when added from drawer (`widget` only) |
+| `components[].min_size` | Minimum w×h in edit mode (`widget` only) |
+| `components[].action_mode` | `momentary` or `toggle` (`action` only) |
+| `components[].settings` | Declarative fields for manifest-based settings form (`widget`) |
 
-Reference plugin: [`apps/demo/`](../apps/demo/).
+Reference plugins (bundled, visible in store/drawer):
+
+| Plugin | Type | Path |
+|--------|------|------|
+| Demo Widget | `widget` | [`apps/demo-widget/`](../apps/demo-widget/) |
+| Demo Buttons | `action` (momentary + toggle) | [`apps/demo-buttons/`](../apps/demo-buttons/) |
+| Demo App | `app` (fullscreen) | [`apps/demo-app/`](../apps/demo-app/) |
+
+Legacy [`apps/demo/`](../apps/demo/) remains for old layouts but is hidden from the store and add drawer.
+
+---
+
+## Component types
+
+HomelabOS supports three component types. A single plugin may export more than one component (e.g. two taskbar buttons in one package).
+
+### Widget (`type: "widget"`)
+
+Dashboard tiles in the GridStack workspace. Users add them via **Edit → +**.
+
+- `size` / `min_size` — grid footprint (cells).
+- `settings` — optional declarative fields; shell renders a form in **Edit → gear**.
+- Runs in a sandboxed iframe with widget chrome (title bar, remove in edit mode).
+- See [`apps/demo-widget/`](../apps/demo-widget/) for SSE stats + manifest settings.
+
+### Action (`type: "action"`)
+
+Taskbar buttons — no grid tile. Users add them via **Edit → +** (they appear in the taskbar action strip).
+
+| `action_mode` | Behaviour |
+|---------------|-----------|
+| `momentary` | Fires on each click (monostable). Shell POSTs once per press. |
+| `toggle` | Bistable on/off. Shell POSTs with `mode: "toggle"` and syncs visual `active` state. |
+
+Backend contract (shell → plugin):
+
+```
+POST /api/plugins/{plugin_id}/action/{component_id}
+Body: { "mode": "momentary" | "toggle" }
+Response: { "ok": true, "state": "<plugin-defined>", "active"?: boolean }
+```
+
+Optional state sync for toggle buttons:
+
+```
+GET /api/plugins/{plugin_id}/action/{component_id}/state
+Response: { "ok": true, "state": "on"|"off"|…, "active": boolean }
+```
+
+Reference: [`apps/demo-buttons/main.py`](../apps/demo-buttons/main.py) — `demo_pulse` (momentary) and `demo_lamp` (toggle) in one plugin.
+
+`entry` HTML is optional for actions (used for dev preview); the shell renders the taskbar button from manifest `name` + `icon`.
+
+### App (`type: "app"`)
+
+Fullscreen overlay launched from **Edit → +**. Covers the workspace; taskbar stays visible.
+
+- No grid placement — opens immediately when chosen from the drawer.
+- Runs in a sandboxed iframe with SSE relay (same as widgets).
+- Close from inside the app: `HomelabOS.closeApp()` → shell receives `CLOSE_APP` postMessage.
+- Reference: [`apps/demo-app/`](../apps/demo-app/).
 
 ---
 
@@ -143,11 +204,12 @@ Widgets run in **sandboxed iframes**. Include the SDK:
 
 ```javascript
 HomelabOS.version          // "1.0.0"
-HomelabOS.platform         // { kiosk, theme, accent }
+HomelabOS.platform         // { kiosk, theme, accent, coreVersion, … }
 HomelabOS.fetch(url, opts) // same-origin fetch
 HomelabOS.subscribe(ch, fn) // SSE relay from shell
-HomelabOS.getConfig()      // per-instance config object
+HomelabOS.getConfig()      // per-instance config object (widgets)
 HomelabOS.saveConfig(obj)  // persist → layout.json via shell
+HomelabOS.closeApp()       // close fullscreen app overlay (apps only)
 ```
 
 ### iframe query params (set by shell)
@@ -212,7 +274,8 @@ python scripts/dev.py
 pytest
 curl -s http://localhost:8000/api/plugins
 curl -s http://localhost:8000/api/components
-curl -s http://localhost:8000/api/plugins/demo/ping
+curl -s http://localhost:8000/api/plugins/demo-widget/ping
+curl -s -X POST http://localhost:8000/api/plugins/demo-buttons/action/demo_pulse -H 'Content-Type: application/json' -d '{"mode":"momentary"}'
 ```
 
 Shell dev server (hot reload UI):
@@ -253,6 +316,8 @@ Optional `requires.core` (semver) will gate install when the marketplace API lan
 - [ ] `api_version: 1`
 - [ ] Widget works at minimum `min_size`
 - [ ] Widget handles missing/empty `config`
+- [ ] Action routes return `ok` + sensible `state`; toggle actions expose `/state` if needed
+- [ ] Fullscreen apps call `HomelabOS.closeApp()` or provide in-app navigation
 - [ ] Backend errors return sensible HTTP status codes
 - [ ] No hard-coded `localhost` URLs — use relative paths
 - [ ] Tested in kiosk mode (`?kiosk=true`) and edit mode
