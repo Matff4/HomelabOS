@@ -186,6 +186,8 @@ export class ShellSSE {
   }
 }
 
+export const shellSSE = new ShellSSE();
+
 export async function softResetDashboard(): Promise<{ message: string }> {
   const res = await fetch('/api/system/soft-reset', { method: 'POST' });
   if (!res.ok) {

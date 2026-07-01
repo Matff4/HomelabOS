@@ -222,7 +222,7 @@ def test_system_soft_reset(client):
         "config": {},
     }
     client.put("/api/layout", json=[layout_item])
-    client.put("/api/config", json={"paneCount": 2})
+    client.put("/api/config", json={"paneCount": 2, "taskbarActions": ["my_btn"]})
 
     response = client.post("/api/system/soft-reset")
     assert response.status_code == 200
@@ -230,6 +230,7 @@ def test_system_soft_reset(client):
     assert client.get("/api/layout").json() == []
     config = client.get("/api/config").json()
     assert config["paneCount"] == 1
+    assert config["taskbarActions"] == []
     import asyncio
 
     from core.events.bus import EventBus

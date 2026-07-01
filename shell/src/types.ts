@@ -14,7 +14,6 @@ export interface PlatformInfo {
   plugin_api_version: number;
   sdk_version: string;
   supported_manifest_api_versions: number[];
-  shell_layout_version?: string | null;
 }
 
 export interface SystemStats {

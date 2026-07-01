@@ -125,7 +125,6 @@ async function boot(): Promise<void> {
     taskbar.onPower(() => modals.openPower(kiosk));
 
     document.body.dataset.shellReady = '1';
-    document.body.dataset.shellLayout = 'grid-launchers-v2';
     document.body.dataset.coreVersion = platform.core_version;
     document.body.dataset.pluginApiVersion = String(platform.plugin_api_version);
     const tbH = taskbarHeight(config);

@@ -11,7 +11,7 @@ def soft_reset() -> dict:
     layout_store().write(Layout([]))
 
     config = config_store().read()
-    next_config = config.model_copy(update={"paneCount": 1})
+    next_config = config.model_copy(update={"paneCount": 1, "taskbarActions": []})
     config_store().write(next_config)
 
     return {
