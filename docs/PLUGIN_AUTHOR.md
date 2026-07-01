@@ -265,12 +265,6 @@ Optional `requires.core` (semver) will gate install when the marketplace API lan
 - **Phase 5** — in-shell store + [HomelabOS-Plugins](https://github.com/Matff4/HomelabOS-Plugins) catalog
 - **Future** — manifest `settings` → structured config form; `REQUEST_SETTINGS` iframe protocol (v1 parity)
 
-### Service restart after install
+### After install
 
-User-installed plugins are extracted to `data/plugins/`. New components appear after install, but **backend routes mount at startup**. Restart after install or update:
-
-```bash
-sudo systemctl restart homelabos
-```
-
-For ecosystem plugins, target the separate **HomelabOS-Plugins** repo once Phase 5 lands; until then, bundle under `apps/` for development.
+Install from the store, then add widgets via **Edit → +**. No service restart is required — static assets and backend routes hot-load after install.

@@ -33,7 +33,7 @@ function catalogEntry(
 }
 
 function showRestartNotice(modals: Modals, message: string): void {
-  modals.alert('Plugin store', `${message}\n\nRestart homelabos to load backend routes and widgets.`);
+  modals.alert('Plugin store', message);
 }
 
 export function openPluginStore(modals: Modals, onChanged: () => void): void {

@@ -65,7 +65,7 @@ def create_app() -> FastAPI:
     assert settings.plugins_dir
     plugin_manager = get_plugin_manager(settings.apps_dir, settings.plugins_dir)
     plugin_manager.discover()
-    plugin_manager.mount(app)
+    plugin_manager.warm_backend_cache()
 
     dist = settings.shell_dist_dir
     if dist and dist.is_dir() and (dist / "index.html").is_file():

@@ -139,7 +139,13 @@ def _write_plugin_tarball(path: Path, plugin_id: str = "sample") -> None:
             }
         ],
     }
-    backend = "from fastapi import APIRouter\nrouter = APIRouter()\n"
+    backend = (
+        "from fastapi import APIRouter\n"
+        "router = APIRouter()\n\n"
+        "@router.get('/ping')\n"
+        "async def ping() -> dict[str, bool]:\n"
+        "    return {'pong': True}\n"
+    )
     widget = "<!DOCTYPE html><html><body>sample</body></html>"
 
     with tarfile.open(path, mode="w:gz") as archive:
@@ -162,10 +168,18 @@ def test_plugin_install_from_tarball(client, tmp_path):
     assert response.status_code == 200
     body = response.json()
     assert body["id"] == "sample"
-    assert body["restart_required"] is True
+    assert body["restart_required"] is False
 
     plugins = client.get("/api/plugins").json()
     assert any(row["id"] == "sample" for row in plugins)
+
+    widget = client.get("/apps/sample/src/widget.html")
+    assert widget.status_code == 200
+    assert "text/html" in widget.headers.get("content-type", "")
+
+    ping = client.get("/api/plugins/sample/ping")
+    assert ping.status_code == 200
+    assert ping.json()["pong"] is True
 
     delete = client.delete("/api/plugins/sample")
     assert delete.status_code == 200

@@ -76,4 +76,6 @@ Or override in tests via config PUT. Tarball URLs in the catalog may also use `f
 
 ## After install
 
-The shell store calls the install API, then prompts to **restart homelabos** so backend routes and static mounts load. New widgets appear in **Edit → +** after restart (or full page reload).
+Install from the shell store, then **Edit → +** to add a widget. If a widget was already on the dashboard with a load error, remove it and add again (or refresh the page).
+
+Plugin static files and backend routes load without restarting `homelabos.service`.

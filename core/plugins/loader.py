@@ -1,4 +1,4 @@
-"""Plugin discovery and backend mounting."""
+"""Plugin discovery and dynamic backend loading."""
 
 from __future__ import annotations
 
@@ -9,8 +9,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
+from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
 
 from core.models.manifest import PluginManifest
@@ -30,10 +29,11 @@ class PluginManager:
         self.bundled_dir = bundled_dir
         self.user_dir = user_dir
         self.plugins: dict[str, LoadedPlugin] = {}
-        self._mounted_static: set[str] = set()
+        self._routers: dict[str, APIRouter] = {}
+        self._router_mtimes: dict[str, float] = {}
 
     def discover(self) -> list[LoadedPlugin]:
-        self.plugins.clear()
+        found: dict[str, LoadedPlugin] = {}
         for root in (self.bundled_dir, self.user_dir):
             if not root.is_dir():
                 continue
@@ -53,47 +53,69 @@ class PluginManager:
                     logger.warning(
                         "Plugin folder %s id mismatch (manifest.id=%s)", entry.name, manifest.id
                     )
-                plugin = LoadedPlugin(manifest=manifest, directory=entry, backend_loaded=False)
-                self.plugins[manifest.id] = plugin
+                found[manifest.id] = LoadedPlugin(
+                    manifest=manifest,
+                    directory=entry,
+                    backend_loaded=manifest.id in self._routers,
+                )
+
+        removed = set(self._routers) - set(found)
+        for plugin_id in removed:
+            self._routers.pop(plugin_id, None)
+            self._router_mtimes.pop(plugin_id, None)
+            sys.modules.pop(f"homelabos.plugins.{plugin_id}", None)
+
+        self.plugins = found
         return list(self.plugins.values())
 
-    def mount(self, app: FastAPI) -> None:
-        for plugin in self.plugins.values():
-            static_mount = f"/apps/{plugin.manifest.id}"
-            if plugin.manifest.id not in self._mounted_static:
-                app.mount(
-                    static_mount,
-                    StaticFiles(directory=plugin.directory),
-                    name=f"plugin_static_{plugin.manifest.id}",
-                )
-                self._mounted_static.add(plugin.manifest.id)
+    def warm_backend_cache(self) -> None:
+        """Pre-load plugin backends at startup (optional; also loads lazily on first request)."""
+        for plugin_id in self.plugins:
+            self.get_backend_router(plugin_id)
 
-            backend_path = plugin.directory / (plugin.manifest.backend or "main.py")
-            if not plugin.manifest.backend and not backend_path.is_file():
-                continue
-            if not backend_path.is_file():
-                logger.warning("[%s] backend file missing: %s", plugin.manifest.id, backend_path)
-                continue
+    def get_backend_router(self, plugin_id: str) -> APIRouter | None:
+        plugin = self.plugins.get(plugin_id)
+        if plugin is None:
+            return None
 
-            module_name = f"homelabos.plugins.{plugin.manifest.id}"
-            spec = importlib.util.spec_from_file_location(module_name, backend_path)
-            if spec is None or spec.loader is None:
-                continue
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[module_name] = module
-            try:
-                spec.loader.exec_module(module)
-            except Exception as exc:
-                logger.exception("[%s] backend load failed: %s", plugin.manifest.id, exc)
-                continue
+        backend_path = plugin.directory / (plugin.manifest.backend or "main.py")
+        if not plugin.manifest.backend and not backend_path.is_file():
+            return None
+        if not backend_path.is_file():
+            return None
 
-            router = getattr(module, "router", None)
-            if router is None:
-                continue
-            prefix = f"/api/plugins/{plugin.manifest.id}"
-            app.include_router(router, prefix=prefix)
+        mtime = backend_path.stat().st_mtime
+        cached = self._routers.get(plugin_id)
+        if cached is not None and self._router_mtimes.get(plugin_id) == mtime:
             plugin.backend_loaded = True
-            logger.info("[%s] backend mounted at %s", plugin.manifest.id, prefix)
+            return cached
+
+        module_name = f"homelabos.plugins.{plugin_id}"
+        sys.modules.pop(module_name, None)
+
+        spec = importlib.util.spec_from_file_location(module_name, backend_path)
+        if spec is None or spec.loader is None:
+            return None
+
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        try:
+            spec.loader.exec_module(module)
+        except Exception as exc:
+            logger.exception("[%s] backend load failed: %s", plugin_id, exc)
+            plugin.backend_loaded = False
+            return None
+
+        router = getattr(module, "router", None)
+        if router is None:
+            plugin.backend_loaded = False
+            return None
+
+        self._routers[plugin_id] = router
+        self._router_mtimes[plugin_id] = mtime
+        plugin.backend_loaded = True
+        logger.info("[%s] backend loaded for hot dispatch", plugin_id)
+        return router
 
     def summaries(self) -> list[dict]:
         return [
@@ -139,6 +161,9 @@ class PluginManager:
             raise HTTPException(status_code=404, detail="Plugin not found")
         if plugin.manifest.backend and not plugin.backend_loaded:
             return {"id": plugin_id, "status": "degraded", "message": "Backend failed to load"}
+        backend_path = plugin.directory / (plugin.manifest.backend or "main.py")
+        if backend_path.is_file() and not plugin.backend_loaded:
+            return {"id": plugin_id, "status": "degraded", "message": "Backend failed to load"}
         return {"id": plugin_id, "status": "ok", "message": None}
 
 
@@ -154,4 +179,7 @@ def get_plugin_manager(bundled_dir: Path, user_dir: Path) -> PluginManager:
 
 def reset_plugin_manager() -> None:
     global _manager
+    if _manager is not None:
+        for plugin_id in list(_manager._routers):
+            sys.modules.pop(f"homelabos.plugins.{plugin_id}", None)
     _manager = None

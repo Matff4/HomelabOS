@@ -109,16 +109,16 @@ Installs a plugin tarball into `data/plugins/` and updates `data/registry.json`.
 {
   "id": "my-plugin",
   "version": "1.0.0",
-  "restart_required": true,
-  "message": "Plugin installed. Restart homelabos.service to load backend routes."
+  "restart_required": false,
+  "message": "Plugin installed. Add widgets from Edit → +."
 }
 ```
 
-Static assets are available after `discover()`; **backend routes require a service restart** (FastAPI mounts routers at startup).
+Widgets and plugin API routes load **immediately** after install (no service restart). A page refresh may be needed if a widget iframe was added before install finished.
 
 #### `POST /api/plugins/{id}/update` — body `PluginInstallRequest`
 
-Same response shape as install. Replaces the user-installed plugin directory.
+Same response shape as install. Updated backend code is picked up on the next API request.
 
 #### `DELETE /api/plugins/{id}`
 

@@ -52,8 +52,8 @@ async def install_plugin(body: PluginInstallRequest) -> dict:
     return {
         "id": entry.id,
         "version": entry.version,
-        "restart_required": True,
-        "message": "Plugin installed. Restart homelabos.service to load backend routes.",
+        "restart_required": False,
+        "message": "Plugin installed. Add widgets from Edit → +.",
     }
 
 
@@ -73,8 +73,8 @@ async def update_plugin(plugin_id: str, body: PluginInstallRequest) -> dict:
     return {
         "id": entry.id,
         "version": entry.version,
-        "restart_required": True,
-        "message": "Plugin updated. Restart homelabos.service to load backend routes.",
+        "restart_required": False,
+        "message": "Plugin updated.",
     }
 
 
@@ -88,6 +88,6 @@ async def delete_plugin(plugin_id: str) -> dict:
     _manager().discover()
     return {
         "id": plugin_id,
-        "restart_required": True,
-        "message": "Plugin removed. Restart homelabos.service to unload backend routes.",
+        "restart_required": False,
+        "message": "Plugin removed.",
     }

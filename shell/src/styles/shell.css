@@ -637,6 +637,10 @@ body.theme-light .setting-row select option {
   flex: 0 0 auto;
 }
 
+.store-modal .modal-footer {
+  padding-top: 12px;
+}
+
 .store-modal .modal-body.store-body {
   padding-top: 14px;
 }
