@@ -37,6 +37,10 @@ export class Modals {
     return this.root.querySelector(selector);
   }
 
+  querySelectorAll<T extends Element = Element>(selector: string): NodeListOf<T> {
+    return this.root.querySelectorAll(selector);
+  }
+
   alert(title: string, message: string): void {
     this.open(`
       <div class="modal-backdrop">
