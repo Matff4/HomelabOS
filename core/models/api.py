@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from core.models.config import SystemConfig
 from core.models.layout import LayoutItem
-from core.models.manifest import ComponentSize, ComponentType, SettingOption, SettingType
+from core.models.manifest import ComponentSize, ComponentType, SettingOption, SettingType, ActionMode
 
 
 class HealthResponse(BaseModel):
@@ -110,6 +110,7 @@ class ComponentInfo(BaseModel):
     size: ComponentSize | None = None
     min_size: ComponentSize | None = None
     settings: list[WidgetSettingInfo] | None = None
+    action_mode: ActionMode | None = None
 
 
 # Re-export document types used by config/layout routes

@@ -1,10 +1,12 @@
-import type { ComponentInfo, SystemConfig, WidgetSetting } from './types';
+import type { ComponentInfo, SystemConfig } from './types';
 import { applyTheme, saveConfig } from './api';
+import { bindAddDrawer, renderAddDrawer, type AddDrawerHandlers } from './add-drawer';
 import { selectOptions } from './format';
 import { icon, icons } from './icons';
 import { openPluginStore } from './store-modal';
 import { showToast } from './toast';
 import { readWidgetSettingsForm, renderWidgetSettingsForm } from './widget-settings';
+import type { WidgetSetting } from './types';
 
 type ConfirmHandler = () => void | Promise<void | boolean>;
 
@@ -195,38 +197,21 @@ export class Modals {
     });
   }
 
-  openDrawer(components: ComponentInfo[], onPick: (component: ComponentInfo) => void): void {
-    const widgets = components.filter((c) => c.type === 'widget');
-    this.open(`
-      <div class="modal-backdrop">
-        <div class="modal-card modal-wide">
-          <div class="modal-header"><h2>Add widget</h2></div>
-          <div class="modal-body">
-            <ul class="drawer-list">
-              ${widgets
-                .map(
-                  (c) =>
-                    `<li><button type="button" class="drawer-item" data-id="${c.id}">${c.name}</button></li>`,
-                )
-                .join('') || '<li class="muted">No widgets available</li>'}
-            </ul>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="modal-btn" data-modal-close>Close</button>
-          </div>
-        </div>
-      </div>
-    `);
-
-    this.root.querySelectorAll('.drawer-item').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = (btn as HTMLElement).dataset.id!;
-        const component = widgets.find((c) => c.id === id);
-        if (component) {
-          onPick(component);
-          this.close();
-        }
-      });
+  openAddDrawer(components: ComponentInfo[], handlers: AddDrawerHandlers): void {
+    this.open(renderAddDrawer(components));
+    bindAddDrawer(this.root, components, {
+      onWidget: (component) => {
+        handlers.onWidget(component);
+        this.close();
+      },
+      onApp: (component) => {
+        handlers.onApp(component);
+        this.close();
+      },
+      onAction: (component) => {
+        handlers.onAction(component);
+        this.close();
+      },
     });
   }
 

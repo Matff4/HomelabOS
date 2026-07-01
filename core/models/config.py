@@ -25,3 +25,7 @@ class SystemConfig(BaseModel):
     accentColor: AccentColor = "blue"
     marketplaceUrl: AnyUrl | None = Field(default=DEFAULT_MARKETPLACE_URL)
     paneCount: int = Field(default=1, ge=1, le=8)
+    taskbarActions: list[str] = Field(
+        default_factory=list,
+        description="Component ids (type=action) pinned to the taskbar",
+    )

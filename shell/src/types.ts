@@ -7,6 +7,7 @@ export interface SystemConfig {
   accentColor: 'blue' | 'green' | 'purple' | 'red' | 'orange' | 'yellow';
   marketplaceUrl?: string | null;
   paneCount?: number;
+  taskbarActions?: string[];
 }
 
 export interface PlatformInfo {
@@ -66,6 +67,7 @@ export interface ComponentInfo {
   size?: { w: number; h: number } | null;
   min_size?: { w: number; h: number } | null;
   settings?: WidgetSetting[] | null;
+  action_mode?: 'toggle' | 'momentary' | null;
 }
 
 export interface SSEMessage {

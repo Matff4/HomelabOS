@@ -1,4 +1,4 @@
-import type { SystemConfig, SystemStats } from './types';
+import type { ComponentInfo, SystemConfig, SystemStats } from './types';
 import { formatClock, formatStats } from './geometry';
 import { shellSSE } from './api';
 import { icon, icons } from './icons';
@@ -6,6 +6,8 @@ import { icon, icons } from './icons';
 export class Taskbar {
   private config: SystemConfig;
   private clockTimer = 0;
+  private components = new Map<string, ComponentInfo>();
+  private actionHandler: ((componentId: string) => void) | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -15,6 +17,12 @@ export class Taskbar {
     this.render();
     this.startClock();
     this.bindSseStatus();
+    this.root.querySelector('#taskbar-actions')?.addEventListener('click', (event) => {
+      const btn = (event.target as Element).closest('[data-action-id]');
+      if (!btn) return;
+      const id = (btn as HTMLElement).dataset.actionId;
+      if (id) this.actionHandler?.(id);
+    });
   }
 
   private render(): void {
@@ -22,6 +30,7 @@ export class Taskbar {
     this.root.innerHTML = `
       <div class="taskbar-section taskbar-left">
         <span class="os-title">Homelab OS</span>
+        <div class="taskbar-actions" id="taskbar-actions"></div>
         <span class="sse-dot" id="sse-dot" title="Event stream"></span>
       </div>
       <div class="taskbar-section taskbar-center">
@@ -44,7 +53,7 @@ export class Taskbar {
           <div class="stat-badge" id="stat-ram">${icon(icons.ram)}<span>--</span></div>
         </div>
         <div class="controls-container">
-          <button type="button" class="taskbar-btn edit-only-btn" id="btn-add" title="Add widget">
+          <button type="button" class="taskbar-btn edit-only-btn" id="btn-add" title="Add to dashboard">
             ${icon(icons.add)}
           </button>
           <button type="button" class="taskbar-btn" id="btn-edit" title="Edit layout">
@@ -68,6 +77,36 @@ export class Taskbar {
   updateConfig(config: SystemConfig): void {
     this.config = config;
     this.root.className = `top-bar size-${config.barHeight}`;
+    this.refreshActions();
+  }
+
+  setComponents(components: ComponentInfo[]): void {
+    this.components = new Map(components.map((row) => [row.id, row]));
+    this.refreshActions();
+  }
+
+  refreshActions(): void {
+    const container = this.root.querySelector('#taskbar-actions');
+    if (!container) return;
+
+    const ids = this.config.taskbarActions ?? [];
+    container.innerHTML = ids
+      .map((id) => {
+        const component = this.components.get(id);
+        if (!component || component.type !== 'action') return '';
+        const mode = component.action_mode === 'toggle' ? 'Toggle' : 'Button';
+        const glyph = component.icon || icons.smartButton;
+        return `<button type="button" class="taskbar-btn taskbar-action-btn" data-action-id="${id}" title="${component.name} (${mode})">${icon(glyph)}</button>`;
+      })
+      .join('');
+  }
+
+  getComponent(id: string): ComponentInfo | undefined {
+    return this.components.get(id);
+  }
+
+  onActionClick(handler: (componentId: string) => void): void {
+    this.actionHandler = handler;
   }
 
   onAddWidget(handler: () => void): void {

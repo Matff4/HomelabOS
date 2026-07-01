@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ComponentType = Literal["widget", "app", "action"]
 SettingType = Literal["text", "number", "boolean", "select", "password"]
+ActionMode = Literal["toggle", "momentary"]
 
 
 class ComponentSize(BaseModel):
@@ -44,6 +45,10 @@ class ManifestComponent(BaseModel):
     size: ComponentSize | None = None
     min_size: ComponentSize | None = None
     settings: list[WidgetSetting] | None = None
+    action_mode: ActionMode | None = Field(
+        default=None,
+        description="For type=action: toggle (latched) or momentary (press)",
+    )
 
 
 class ManifestRequires(BaseModel):

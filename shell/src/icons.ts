@@ -12,6 +12,8 @@ export const icons = {
   close: 'close',
   store: 'storefront',
   widget: 'widgets',
+  app: 'open_in_full',
+  smartButton: 'smart_button',
 } as const;
 
 export function icon(name: string, label?: string): string {

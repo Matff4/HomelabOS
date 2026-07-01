@@ -82,6 +82,13 @@
       "minimum": 1,
       "title": "Panecount",
       "type": "integer"
+    },
+    "taskbarActions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Taskbaractions",
+      "type": "array"
     }
   },
   "title": "HomelabOS System Config",

@@ -8,8 +8,10 @@ import {
   fetchDisplay,
   fetchLayout,
   fetchPlatform,
+  saveConfig,
   shellSSE,
 } from './api';
+import { openAppOverlay } from './app-overlay';
 import {
   computeGridCapacity,
   getBrowserViewport,
@@ -18,6 +20,7 @@ import {
 } from './geometry';
 import { Modals } from './modals';
 import { Taskbar } from './taskbar';
+import { showToast } from './toast';
 import { Workspace } from './workspace';
 
 function syncBrowserViewport(): void {
@@ -63,12 +66,52 @@ async function boot(): Promise<void> {
     const layout = await fetchLayout();
     await workspace.init(config, layout, platform, physical, browser);
 
+    const components = await fetchComponents();
+    taskbar.setComponents(components);
+
     taskbar.onEditToggle(() => workspace.toggleEditMode());
     taskbar.onAddWidget(() => {
       if (!workspace.isEditMode()) workspace.setEditMode(true);
       void fetchComponents().then((list) => {
-        modals.openDrawer(list, (component) => void workspace.addWidget(component));
+        taskbar.setComponents(list);
+        modals.openAddDrawer(list, {
+          onWidget: (component) => void workspace.addWidget(component),
+          onApp: (component) => openAppOverlay(component, config, platform),
+          onAction: (component) => {
+            void (async () => {
+              const current = config.taskbarActions ?? [];
+              if (current.includes(component.id)) {
+                showToast(`${component.name} is already on the taskbar`, 'info');
+                return;
+              }
+              const next = { ...config, taskbarActions: [...current, component.id] };
+              const saved = await saveConfig(next);
+              Object.assign(config, saved);
+              taskbar.updateConfig(saved);
+              showToast(`${component.name} added to taskbar`, 'success');
+            })();
+          },
+        });
       });
+    });
+    taskbar.onActionClick((componentId) => {
+      const component = taskbar.getComponent(componentId);
+      if (!component) return;
+      const mode = component.action_mode === 'toggle' ? 'toggle' : 'momentary';
+      void fetch(`/api/plugins/${component.plugin_id}/action/${component.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error('Action failed');
+          return res.json() as Promise<{ ok?: boolean; state?: string }>;
+        })
+        .then((body) => {
+          const detail = body.state ? ` (${body.state})` : '';
+          showToast(`${component.name}${detail}`, 'success');
+        })
+        .catch(() => showToast(`${component.name}: not wired yet`, 'info'));
     });
     taskbar.onPanePrev(() => workspace.prevPane());
     taskbar.onPaneNext(() => workspace.nextPane());
@@ -82,7 +125,10 @@ async function boot(): Promise<void> {
     });
     taskbar.onStore(() => {
       modals.openStore(() => {
-        void workspace.refreshPlugins();
+        void fetchComponents().then((list) => {
+          taskbar.setComponents(list);
+          void workspace.refreshPlugins();
+        });
       });
     });
     taskbar.onPower(() => modals.openPower());

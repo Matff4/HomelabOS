@@ -21,6 +21,7 @@ from core.models.manifest import PluginManifest
 from core.models.registry import PluginRegistry, RegistryEntry
 from core.plugins.compatibility import core_meets_requirement
 from core.services.layout_cleanup import component_ids_for_plugin, remove_layout_items_for_components
+from core.storage import config_store
 from core.storage.registry_store import registry_store
 
 logger = logging.getLogger(__name__)
@@ -153,6 +154,10 @@ def remove_installed_plugin(plugin_id: str, *, bundled_dir: Path, user_dir: Path
     component_ids = component_ids_for_plugin(dest)
     shutil.rmtree(dest)
     remove_layout_items_for_components(component_ids)
+    if component_ids:
+        config = config_store().read()
+        config.taskbarActions = [row for row in config.taskbarActions if row not in component_ids]
+        config_store().write(config)
     registry = registry_store().read()
     registry.plugins = [row for row in registry.plugins if row.id != plugin_id]
     registry_store().write(registry)
