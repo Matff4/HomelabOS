@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { writeFileSync } from 'fs';
 
 export default defineConfig({
   root: '.',
@@ -17,6 +18,16 @@ export default defineConfig({
       name: 'strip-crossorigin',
       transformIndexHtml(html) {
         return html.replace(/\s+crossorigin/g, '');
+      },
+    },
+    {
+      name: 'shell-version',
+      closeBundle() {
+        const out = resolve(__dirname, 'dist/shell-version.json');
+        writeFileSync(
+          out,
+          JSON.stringify({ layout: 'grid-launchers-v2', builtAt: new Date().toISOString() }),
+        );
       },
     },
   ],

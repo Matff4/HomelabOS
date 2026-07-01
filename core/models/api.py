@@ -63,6 +63,7 @@ class PlatformInfo(BaseModel):
     plugin_api_version: int = Field(ge=1)
     sdk_version: str
     supported_manifest_api_versions: list[int]
+    shell_layout_version: str | None = None
 
 
 class PluginHealth(BaseModel):

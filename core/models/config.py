@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field, model_validator
 
 from core.constants import DEFAULT_MARKETPLACE_URL
 
@@ -25,7 +25,10 @@ class SystemConfig(BaseModel):
     accentColor: AccentColor = "blue"
     marketplaceUrl: AnyUrl | None = Field(default=DEFAULT_MARKETPLACE_URL)
     paneCount: int = Field(default=1, ge=1, le=8)
-    taskbarActions: list[str] = Field(
-        default_factory=list,
-        description="Component ids (type=action) pinned to the taskbar",
-    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def strip_deprecated_fields(cls, data: object) -> object:
+        if isinstance(data, dict):
+            data.pop("taskbarActions", None)
+        return data

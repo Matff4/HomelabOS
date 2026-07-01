@@ -15,7 +15,6 @@ from core.hal import get_hal, reset_hal
 from core.models.api import HealthResponse
 from core.plugins.loader import get_plugin_manager, reset_plugin_manager
 from core.routes import api_router
-from core.services.config_migrate import migrate_config
 from core.services.tasks import run_publishers
 from core.settings import settings
 
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings.data_dir.mkdir(parents=True, exist_ok=True)
-    migrate_config()
     get_hal(mock=settings.mock_hal)
     bus = get_bus()
     bus._running = True

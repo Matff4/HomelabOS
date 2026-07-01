@@ -101,7 +101,7 @@ Legacy [`apps/demo/`](../apps/demo/) remains for old layouts but is hidden from 
 
 ## Component types
 
-HomelabOS supports three component types. A single plugin may export more than one component (e.g. two taskbar buttons in one package).
+HomelabOS supports three component types. A single plugin may export more than one component (e.g. two shortcut icons in one package).
 
 ### Widget (`type: "widget"`)
 
@@ -149,8 +149,6 @@ Homescreen launcher — a **1×1 icon** on the grid. Tap opens a **fullscreen vi
 - Fullscreen iframe uses SSE relay (same as widgets).
 - Close from taskbar ✕ or `HomelabOS.closeApp()` inside the app.
 - Reference: [`apps/demo-app/`](../apps/demo-app/).
-
-> **Note:** Optional taskbar-pinned action buttons may return as a future QoL feature; v1 uses grid placement only.
 
 ---
 

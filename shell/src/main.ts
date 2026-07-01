@@ -9,7 +9,6 @@ import {
   fetchDisplay,
   fetchLayout,
   fetchPlatform,
-  saveConfig,
   shellSSE,
 } from './api';
 import { closeAppOverlay, openAppOverlay } from './app-overlay';
@@ -21,6 +20,7 @@ import {
 } from './geometry';
 import { Modals } from './modals';
 import { Taskbar } from './taskbar';
+import { showToast } from './toast';
 import { Workspace } from './workspace';
 
 function syncBrowserViewport(): void {
@@ -33,12 +33,7 @@ function syncBrowserViewport(): void {
 
 async function boot(): Promise<void> {
   try {
-    let config = await fetchConfig();
-    // Grid launchers replaced taskbar-pinned actions — clear legacy config ASAP.
-    if (config.taskbarActions?.length) {
-      config = await saveConfig({ ...config, taskbarActions: [] });
-    }
-    const platform = await fetchPlatform();
+    const [config, platform] = await Promise.all([fetchConfig(), fetchPlatform()]);
     applyTheme(config);
 
     const display = await fetchDisplay().catch(() => null);
@@ -94,9 +89,18 @@ async function boot(): Promise<void> {
       void fetchComponents().then((list) => {
         taskbar.setComponents(list);
         modals.openAddDrawer(list, {
-          onWidget: (component) => void workspace.addGridItem(component),
-          onApp: (component) => void workspace.addGridItem(component),
-          onAction: (component) => void workspace.addGridItem(component),
+          onWidget: (component) => {
+            void workspace.addGridItem(component);
+            showToast(`${component.name} added to dashboard`, 'success');
+          },
+          onApp: (component) => {
+            void workspace.addGridItem(component);
+            showToast(`${component.name} added to dashboard`, 'success');
+          },
+          onAction: (component) => {
+            void workspace.addGridItem(component);
+            showToast(`${component.name} added to dashboard`, 'success');
+          },
         });
       });
     });
