@@ -11,7 +11,8 @@
       "name": "Pulse",
       "icon": "touch_app",
       "entry": "src/action.html",
-      "action_mode": "momentary"
+      "action_mode": "momentary",
+      "size": { "w": 1, "h": 1 }
     },
     {
       "id": "demo_lamp",
@@ -19,7 +20,8 @@
       "name": "Lamp",
       "icon": "lightbulb",
       "entry": "src/action.html",
-      "action_mode": "toggle"
+      "action_mode": "toggle",
+      "size": { "w": 1, "h": 1 }
     }
   ]
 }

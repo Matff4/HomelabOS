@@ -25,6 +25,8 @@ import {
   widgetQuery,
 } from './geometry';
 import { icon, icons } from './icons';
+import { fetchActionActive, invokePluginAction } from './actions';
+import { showToast } from './toast';
 
 const MAX_PANES = 8;
 
@@ -68,6 +70,7 @@ export class Workspace {
     private readonly modals: Modals,
     private readonly onEditChange: (enabled: boolean) => void,
     private readonly onPaneChange: (active: number, total: number) => void,
+    private readonly openApp: (component: ComponentInfo) => void,
   ) {}
 
   async init(
@@ -177,10 +180,13 @@ export class Workspace {
     this.onPaneChange(this.activePane, this.paneCount);
   }
 
-  async addWidget(component: ComponentInfo): Promise<void> {
+  async addGridItem(component: ComponentInfo): Promise<void> {
     if (!this.config || !this.spec) return;
-    const size = component.size ?? { w: 3, h: 1 };
-    const min = component.min_size ?? size;
+    const size =
+      component.type === 'widget'
+        ? (component.size ?? { w: 3, h: 1 })
+        : { w: 1, h: 1 };
+    const min = component.type === 'widget' ? (component.min_size ?? size) : { w: 1, h: 1 };
     const item: LayoutItem = {
       instance_id: `inst_${Date.now()}`,
       component_id: component.id,
@@ -194,7 +200,12 @@ export class Workspace {
     this.layout.push(clampLayoutItem(item, this.spec));
     await saveLayout(this.layout);
     this.clearPaneEmptyState(this.activePane);
-    this.mountWidget(item, component, this.activePane);
+    this.mountGridItem(item, component, this.activePane);
+  }
+
+  /** @deprecated use addGridItem */
+  async addWidget(component: ComponentInfo): Promise<void> {
+    return this.addGridItem(component);
   }
 
   async applyWidgetConfig(
@@ -257,7 +268,7 @@ export class Workspace {
     empty.className = 'widget-empty';
     empty.textContent =
       pane === this.activePane
-        ? 'No widgets — tap Edit, then + to add one.'
+        ? 'No items — tap Edit, then + to add one.'
         : 'Empty page';
     stage.appendChild(empty);
   }
@@ -313,7 +324,12 @@ export class Workspace {
 
     this.capacity = capacity;
     this.spec = spec;
-    this.layout = this.layout.map((item) => clampLayoutItem(item, capacity));
+    this.layout = this.layout.map((item) => {
+      const comp = this.components.get(item.component_id);
+      const sized =
+        comp && comp.type !== 'widget' ? { ...item, w: 1, h: 1 } : item;
+      return clampLayoutItem(sized, capacity);
+    });
     applyGridSpecToDocument(spec);
 
     if (this.activePane >= this.paneCount) {
@@ -366,7 +382,7 @@ export class Workspace {
         staticGrid: !this.editMode,
         animate: false,
         disableOneColumnMode: true,
-        draggable: { handle: '.widget-header' },
+        draggable: { handle: '.widget-header, .grid-launcher-handle' },
       },
       gridEl,
     );
@@ -387,7 +403,7 @@ export class Workspace {
       empty.className = 'widget-empty';
       empty.textContent =
         pane === this.activePane
-          ? 'No widgets — tap Edit, then + to add one.'
+          ? 'No items — tap Edit, then + to add one.'
           : 'Empty page';
       stage.appendChild(empty);
       return;
@@ -395,7 +411,7 @@ export class Workspace {
 
     paneItems.forEach((item) => {
       const component = this.components.get(item.component_id);
-      if (component) this.mountWidget(item, component, pane);
+      if (component) this.mountGridItem(item, component, pane);
     });
   }
 
@@ -528,7 +544,94 @@ export class Workspace {
     requestAnimationFrame(() => this.syncAllSquareCellSizes());
   }
 
-  private mountWidget(item: LayoutItem, component: ComponentInfo, pane: number): void {
+  private mountGridItem(item: LayoutItem, component: ComponentInfo, pane: number): void {
+    if (component.type === 'widget') {
+      this.mountWidgetTile(item, component, pane);
+    } else {
+      this.mountLauncherTile(item, component, pane);
+    }
+  }
+
+  private mountLauncherTile(item: LayoutItem, component: ComponentInfo, pane: number): void {
+    const grid = this.grids.get(pane);
+    if (!grid || !this.spec) return;
+
+    const clamped = clampLayoutItem(
+      { ...item, w: 1, h: 1 },
+      this.spec,
+    );
+    this.instancePane.set(clamped.instance_id, pane);
+
+    const isAction = component.type === 'action';
+    const glyph = component.icon || (isAction ? icons.smartButton : icons.app);
+
+    const content = document.createElement('div');
+    content.className = `grid-launcher grid-launcher-handle${isAction ? ' grid-launcher-action' : ' grid-launcher-app'}`;
+
+    content.innerHTML = `
+      <button type="button" class="grid-launcher-hit" title="${component.name}">
+        <span class="grid-launcher-icon">${icon(glyph)}</span>
+        <span class="grid-launcher-label">${widgetTitle(clamped, component)}</span>
+      </button>
+      <button type="button" class="grid-launcher-delete" title="Remove">
+        ${icon(icons.close)}
+      </button>
+    `;
+
+    content.querySelector('.grid-launcher-hit')?.addEventListener('click', () => {
+      if (this.editMode) return;
+      if (isAction) void this.handleLauncherAction(component, content);
+      else this.openApp(component);
+    });
+
+    content.querySelector('.grid-launcher-delete')?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      void this.removeWidget(clamped.instance_id);
+    });
+
+    if (isAction && component.action_mode === 'toggle') {
+      void fetchActionActive(component).then((active) => {
+        content.classList.toggle('active', active);
+      });
+    }
+
+    grid.addWidget({
+      id: clamped.instance_id,
+      x: clamped.x,
+      y: clamped.y,
+      w: 1,
+      h: 1,
+      noResize: true,
+    });
+
+    const mountContent = (): void => {
+      const node = grid.engine.nodes.find((n) => n.id === clamped.instance_id);
+      const slot = node?.el?.querySelector('.grid-stack-item-content');
+      if (!slot) return;
+      slot.innerHTML = '';
+      slot.appendChild(content);
+    };
+    mountContent();
+    if (!content.isConnected) requestAnimationFrame(mountContent);
+  }
+
+  private async handleLauncherAction(
+    component: ComponentInfo,
+    tile: HTMLElement,
+  ): Promise<void> {
+    try {
+      const body = await invokePluginAction(component);
+      if (component.action_mode === 'toggle') {
+        tile.classList.toggle('active', Boolean(body.active));
+      }
+      const detail = body.state ? ` (${body.state})` : '';
+      showToast(`${component.name}${detail}`, 'success');
+    } catch {
+      showToast(`${component.name}: action failed`, 'error');
+    }
+  }
+
+  private mountWidgetTile(item: LayoutItem, component: ComponentInfo, pane: number): void {
     const grid = this.grids.get(pane);
     if (!grid || !this.config || !this.spec) return;
 

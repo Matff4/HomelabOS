@@ -120,6 +120,7 @@ Core stays stable; plugins move fast without breaking the kiosk.
 - [x] `data/` backup tarball
 - [ ] Pre-baked image deps (no runtime pip on device)
 - [ ] Performance: off-screen iframe detach, kiosk taskbar blur removal
+- [ ] Optional taskbar-pinned action buttons (grid shortcuts remain default)
 
 ### Phase 8 — Screensaver & display power (planned)
 

@@ -1,6 +1,7 @@
 import 'gridstack/dist/gridstack.min.css';
 import './styles/shell.css';
 
+import type { ComponentInfo } from './types';
 import {
   applyTheme,
   fetchComponents,
@@ -8,10 +9,9 @@ import {
   fetchDisplay,
   fetchLayout,
   fetchPlatform,
-  saveConfig,
   shellSSE,
 } from './api';
-import { openAppOverlay } from './app-overlay';
+import { closeAppOverlay, openAppOverlay } from './app-overlay';
 import {
   computeGridCapacity,
   getBrowserViewport,
@@ -20,7 +20,6 @@ import {
 } from './geometry';
 import { Modals } from './modals';
 import { Taskbar } from './taskbar';
-import { showToast } from './toast';
 import { Workspace } from './workspace';
 
 function syncBrowserViewport(): void {
@@ -61,11 +60,21 @@ async function boot(): Promise<void> {
     const taskbar = new Taskbar(taskbarEl, config);
     taskbar.bindStats();
 
+    const handleCloseApp = (): void => {
+      closeAppOverlay();
+      taskbar.setAppContext(null);
+    };
+
+    const handleOpenApp = (component: ComponentInfo): void => {
+      openAppOverlay(component, config, platform, handleCloseApp);
+      taskbar.setAppContext(component.name, handleCloseApp);
+    };
+
     const workspace = new Workspace(slider, modals, (enabled) => {
       taskbar.setEditActive(enabled);
     }, (active, total) => {
       taskbar.setPaneIndicator(active, total);
-    });
+    }, handleOpenApp);
 
     const layout = await fetchLayout();
     await workspace.init(config, layout, platform, physical, browser);
@@ -79,47 +88,11 @@ async function boot(): Promise<void> {
       void fetchComponents().then((list) => {
         taskbar.setComponents(list);
         modals.openAddDrawer(list, {
-          onWidget: (component) => void workspace.addWidget(component),
-          onApp: (component) => openAppOverlay(component, config, platform),
-          onAction: (component) => {
-            void (async () => {
-              const current = config.taskbarActions ?? [];
-              if (current.includes(component.id)) {
-                showToast(`${component.name} is already on the taskbar`, 'info');
-                return;
-              }
-              const next = { ...config, taskbarActions: [...current, component.id] };
-              const saved = await saveConfig(next);
-              Object.assign(config, saved);
-              taskbar.updateConfig(saved);
-              showToast(`${component.name} added to taskbar`, 'success');
-              void taskbar.syncActionStates();
-            })();
-          },
+          onWidget: (component) => void workspace.addGridItem(component),
+          onApp: (component) => void workspace.addGridItem(component),
+          onAction: (component) => void workspace.addGridItem(component),
         });
       });
-    });
-    taskbar.onActionClick((componentId) => {
-      const component = taskbar.getComponent(componentId);
-      if (!component) return;
-      const mode = component.action_mode === 'toggle' ? 'toggle' : 'momentary';
-      void fetch(`/api/plugins/${encodeURIComponent(component.plugin_id)}/action/${encodeURIComponent(component.id)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode }),
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error('Action failed');
-          return res.json() as Promise<{ ok?: boolean; state?: string; active?: boolean }>;
-        })
-        .then((body) => {
-          if (component.action_mode === 'toggle') {
-            taskbar.setActionActive(componentId, Boolean(body.active));
-          }
-          const detail = body.state ? ` (${body.state})` : '';
-          showToast(`${component.name}${detail}`, 'success');
-        })
-        .catch(() => showToast(`${component.name}: action failed`, 'error'));
     });
     taskbar.onPanePrev(() => workspace.prevPane());
     taskbar.onPaneNext(() => workspace.nextPane());

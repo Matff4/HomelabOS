@@ -7,7 +7,7 @@ export class Taskbar {
   private config: SystemConfig;
   private clockTimer = 0;
   private components = new Map<string, ComponentInfo>();
-  private actionHandler: ((componentId: string) => void) | null = null;
+  private appCloseHandler: (() => void) | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -17,11 +17,8 @@ export class Taskbar {
     this.render();
     this.startClock();
     this.bindSseStatus();
-    this.root.querySelector('#taskbar-actions')?.addEventListener('click', (event) => {
-      const btn = (event.target as Element).closest('[data-action-id]');
-      if (!btn) return;
-      const id = (btn as HTMLElement).dataset.actionId;
-      if (id) this.actionHandler?.(id);
+    this.root.querySelector('#btn-app-close')?.addEventListener('click', () => {
+      this.appCloseHandler?.();
     });
   }
 
@@ -29,8 +26,12 @@ export class Taskbar {
     this.root.className = `top-bar size-${this.config.barHeight}`;
     this.root.innerHTML = `
       <div class="taskbar-section taskbar-left">
-        <span class="os-title">Homelab OS</span>
-        <div class="taskbar-actions" id="taskbar-actions"></div>
+        <span class="os-title" id="os-title-home">Homelab OS</span>
+        <nav class="app-breadcrumb" id="app-breadcrumb" hidden>
+          <span class="breadcrumb-root">Homelab OS</span>
+          <span class="breadcrumb-sep" aria-hidden="true">&gt;</span>
+          <span class="breadcrumb-app" id="breadcrumb-app-name"></span>
+        </nav>
         <span class="sse-dot" id="sse-dot" title="Event stream"></span>
       </div>
       <div class="taskbar-section taskbar-center">
@@ -53,6 +54,9 @@ export class Taskbar {
           <div class="stat-badge" id="stat-ram">${icon(icons.ram)}<span>--</span></div>
         </div>
         <div class="controls-container">
+          <button type="button" class="taskbar-btn app-close-btn" id="btn-app-close" title="Close app" hidden>
+            ${icon(icons.close)}
+          </button>
           <button type="button" class="taskbar-btn edit-only-btn" id="btn-add" title="Add to dashboard">
             ${icon(icons.add)}
           </button>
@@ -77,62 +81,38 @@ export class Taskbar {
   updateConfig(config: SystemConfig): void {
     this.config = config;
     this.root.className = `top-bar size-${config.barHeight}`;
-    this.refreshActions();
   }
 
   setComponents(components: ComponentInfo[]): void {
     this.components = new Map(components.map((row) => [row.id, row]));
-    this.refreshActions();
-  }
-
-  refreshActions(): void {
-    const container = this.root.querySelector('#taskbar-actions');
-    if (!container) return;
-
-    const ids = this.config.taskbarActions ?? [];
-    container.innerHTML = ids
-      .map((id) => {
-        const component = this.components.get(id);
-        if (!component || component.type !== 'action') return '';
-        const mode = component.action_mode === 'toggle' ? 'Toggle' : 'Button';
-        const glyph = component.icon || icons.smartButton;
-        return `<button type="button" class="taskbar-btn taskbar-action-btn" data-action-id="${id}" title="${component.name} (${mode})">${icon(glyph)}</button>`;
-      })
-      .join('');
-    void this.syncActionStates();
   }
 
   getComponent(id: string): ComponentInfo | undefined {
     return this.components.get(id);
   }
 
-  setActionActive(componentId: string, active: boolean): void {
-    const btn = this.root.querySelector(`[data-action-id="${componentId}"]`);
-    btn?.classList.toggle('active', active);
-  }
+  /** Fullscreen app open — breadcrumb in taskbar, hide stats, show close. */
+  setAppContext(appName: string | null, onClose?: () => void): void {
+    const home = this.root.querySelector('#os-title-home') as HTMLElement | null;
+    const crumb = this.root.querySelector('#app-breadcrumb') as HTMLElement | null;
+    const nameEl = this.root.querySelector('#breadcrumb-app-name');
+    const closeBtn = this.root.querySelector('#btn-app-close') as HTMLElement | null;
 
-  async syncActionStates(): Promise<void> {
-    const ids = this.config.taskbarActions ?? [];
-    await Promise.all(
-      ids.map(async (id) => {
-        const component = this.components.get(id);
-        if (!component || component.type !== 'action' || component.action_mode !== 'toggle') return;
-        try {
-          const res = await fetch(
-            `/api/plugins/${encodeURIComponent(component.plugin_id)}/action/${encodeURIComponent(id)}/state`,
-          );
-          if (!res.ok) return;
-          const body = (await res.json()) as { active?: boolean };
-          this.setActionActive(id, Boolean(body.active));
-        } catch {
-          /* optional endpoint */
-        }
-      }),
-    );
-  }
+    this.appCloseHandler = onClose ?? null;
 
-  onActionClick(handler: (componentId: string) => void): void {
-    this.actionHandler = handler;
+    if (appName) {
+      home?.setAttribute('hidden', '');
+      crumb?.removeAttribute('hidden');
+      if (nameEl) nameEl.textContent = appName;
+      closeBtn?.removeAttribute('hidden');
+      this.root.classList.add('app-context');
+    } else {
+      home?.removeAttribute('hidden');
+      crumb?.setAttribute('hidden', '');
+      if (nameEl) nameEl.textContent = '';
+      closeBtn?.setAttribute('hidden', '');
+      this.root.classList.remove('app-context');
+    }
   }
 
   onAddWidget(handler: () => void): void {

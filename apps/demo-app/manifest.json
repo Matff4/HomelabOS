@@ -10,7 +10,8 @@
       "type": "app",
       "name": "About HomelabOS",
       "icon": "open_in_full",
-      "entry": "src/app.html"
+      "entry": "src/app.html",
+      "size": { "w": 1, "h": 1 }
     }
   ]
 }

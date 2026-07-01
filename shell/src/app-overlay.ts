@@ -1,15 +1,16 @@
 import type { ComponentInfo, PlatformInfo, SystemConfig } from './types';
 import { accentColor, shellSSE } from './api';
 import { widgetQuery } from './geometry';
-import { icon, icons } from './icons';
 
 let overlayEl: HTMLElement | null = null;
 let messageHandler: ((event: MessageEvent) => void) | null = null;
+let closeHandler: (() => void) | null = null;
 
 export function openAppOverlay(
   component: ComponentInfo,
   config: SystemConfig,
   platform: PlatformInfo,
+  onClose?: () => void,
 ): void {
   closeAppOverlay();
 
@@ -18,22 +19,13 @@ export function openAppOverlay(
 
   overlayEl = document.createElement('div');
   overlayEl.className = 'app-overlay';
-  overlayEl.innerHTML = `
-    <header class="app-overlay-bar">
-      <button type="button" class="taskbar-btn app-overlay-close" title="Close">
-        ${icon(icons.close)}
-      </button>
-      <span class="app-overlay-title">${component.name}</span>
-    </header>
-    <iframe class="app-overlay-frame" src="${src}" title="${component.name}"></iframe>
-  `;
+  overlayEl.innerHTML = `<iframe class="app-overlay-frame" src="${src}" title="${component.name}"></iframe>`;
 
   document.body.appendChild(overlayEl);
   document.body.classList.add('app-open');
+  closeHandler = onClose ?? null;
 
   const iframe = overlayEl.querySelector('iframe') as HTMLIFrameElement;
-
-  overlayEl.querySelector('.app-overlay-close')?.addEventListener('click', closeAppOverlay);
 
   iframe.addEventListener('load', () => {
     shellSSE.registerIframe(iframe);
@@ -61,6 +53,8 @@ export function closeAppOverlay(): void {
   overlayEl?.remove();
   overlayEl = null;
   document.body.classList.remove('app-open');
+  closeHandler?.();
+  closeHandler = null;
 }
 
 export function isAppOverlayOpen(): boolean {

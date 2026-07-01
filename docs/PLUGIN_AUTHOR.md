@@ -114,12 +114,12 @@ Dashboard tiles in the GridStack workspace. Users add them via **Edit → +**.
 
 ### Action (`type: "action"`)
 
-Taskbar buttons — no grid tile. Users add them via **Edit → +** (they appear in the taskbar action strip).
+Homescreen shortcut — a **1×1 launcher icon** on the grid (not the taskbar). Users add via **Edit → +**.
 
 | `action_mode` | Behaviour |
 |---------------|-----------|
-| `momentary` | Fires on each click (monostable). Shell POSTs once per press. |
-| `toggle` | Bistable on/off. Shell POSTs with `mode: "toggle"` and syncs visual `active` state. |
+| `momentary` | Fires on each tap (monostable). |
+| `toggle` | Bistable on/off; tile shows `active` styling when on. |
 
 Backend contract (shell → plugin):
 
@@ -129,7 +129,7 @@ Body: { "mode": "momentary" | "toggle" }
 Response: { "ok": true, "state": "<plugin-defined>", "active"?: boolean }
 ```
 
-Optional state sync for toggle buttons:
+Optional state sync for toggle shortcuts:
 
 ```
 GET /api/plugins/{plugin_id}/action/{component_id}/state
@@ -138,16 +138,19 @@ Response: { "ok": true, "state": "on"|"off"|…, "active": boolean }
 
 Reference: [`apps/demo-buttons/main.py`](../apps/demo-buttons/main.py) — `demo_pulse` (momentary) and `demo_lamp` (toggle) in one plugin.
 
-`entry` HTML is optional for actions (used for dev preview); the shell renders the taskbar button from manifest `name` + `icon`.
+`entry` HTML is optional (dev preview only); the shell draws the grid icon from manifest `name` + `icon`.
 
 ### App (`type: "app"`)
 
-Fullscreen overlay launched from **Edit → +**. Covers the workspace; taskbar stays visible.
+Homescreen launcher — a **1×1 icon** on the grid. Tap opens a **fullscreen view** over the workspace (everything below the taskbar), like launching an app on a phone.
 
-- No grid placement — opens immediately when chosen from the drawer.
-- Runs in a sandboxed iframe with SSE relay (same as widgets).
-- Close from inside the app: `HomelabOS.closeApp()` → shell receives `CLOSE_APP` postMessage.
+- Taskbar shows **Homelab OS › App name** and a close (✕) control; CPU/RAM badges hide while the app is open.
+- No iframe on the grid tile — only the launcher icon.
+- Fullscreen iframe uses SSE relay (same as widgets).
+- Close from taskbar ✕ or `HomelabOS.closeApp()` inside the app.
 - Reference: [`apps/demo-app/`](../apps/demo-app/).
+
+> **Note:** Optional taskbar-pinned action buttons may return as a future QoL feature; v1 uses grid placement only.
 
 ---
 

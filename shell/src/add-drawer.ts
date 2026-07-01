@@ -42,7 +42,7 @@ export function renderAddDrawer(components: ComponentInfo[]): string {
 
   const body =
     renderSection('Widgets', widgets) +
-    renderSection('Buttons', actions) +
+    renderSection('Shortcuts', actions) +
     renderSection('Apps', apps);
 
   return `
