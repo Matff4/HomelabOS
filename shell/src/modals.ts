@@ -155,14 +155,18 @@ export class Modals {
     });
   }
 
-  openPower(): void {
+  openPower(kiosk: boolean): void {
+    const devBackup = kiosk
+      ? ''
+      : `<a class="modal-btn sys-btn" href="/api/system/backup" download>Download data backup</a>`;
     this.open(`
       <div class="modal-backdrop">
         <div class="modal-card modal-compact">
           <div class="modal-header"><h2>Core Management</h2></div>
           <div class="modal-body modal-actions vertical">
+            <button type="button" class="modal-btn sys-btn danger" id="soft-reset-btn">Clear panes &amp; cache</button>
             <button type="button" class="modal-btn sys-btn" data-power="restart-kiosk">Restart Kiosk</button>
-            <a class="modal-btn sys-btn" href="/api/system/backup" download>Download data backup</a>
+            ${devBackup}
             <button type="button" class="modal-btn sys-btn danger" data-power="reboot">Reboot</button>
             <button type="button" class="modal-btn sys-btn danger" data-power="shutdown">Shutdown</button>
           </div>
@@ -172,6 +176,40 @@ export class Modals {
         </div>
       </div>
     `);
+
+    this.root.querySelector('#soft-reset-btn')?.addEventListener('click', () => {
+      this.confirm(
+        'Clear dashboard?',
+        'Removes all widgets from every pane and taskbar buttons, then restarts the kiosk to clear browser cache. Installed plugins and settings are kept.',
+        async () => {
+          const res = await fetch('/api/system/soft-reset', { method: 'POST' });
+          if (!res.ok) {
+            throw new Error('Reset failed');
+          }
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((key) => caches.delete(key)));
+          }
+          try {
+            localStorage.clear();
+            sessionStorage.clear();
+          } catch {
+            /* ignore */
+          }
+          const restart = await fetch('/api/system/power', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'restart-kiosk' }),
+          });
+          if (!restart.ok) {
+            window.location.reload();
+            return;
+          }
+          window.setTimeout(() => window.location.reload(), 2500);
+        },
+        true,
+      );
+    });
 
     this.root.querySelectorAll('[data-power]').forEach((btn) => {
       btn.addEventListener('click', () => {

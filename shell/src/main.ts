@@ -37,6 +37,10 @@ async function boot(): Promise<void> {
     applyTheme(config);
 
     const display = await fetchDisplay().catch(() => null);
+    const kiosk =
+      new URLSearchParams(window.location.search).get('kiosk') === 'true' ||
+      display?.kiosk === true;
+    if (kiosk) document.body.classList.add('kiosk-mode');
     const physical = getPhysicalDisplay(display);
     const browser = getBrowserViewport();
     syncBrowserViewport();
@@ -131,7 +135,7 @@ async function boot(): Promise<void> {
         });
       });
     });
-    taskbar.onPower(() => modals.openPower());
+    taskbar.onPower(() => modals.openPower(kiosk));
 
     document.body.dataset.shellReady = '1';
     document.body.dataset.coreVersion = platform.core_version;

@@ -186,4 +186,24 @@ export class ShellSSE {
   }
 }
 
-export const shellSSE = new ShellSSE();
+export async function softResetDashboard(): Promise<{ message: string }> {
+  const res = await fetch('/api/system/soft-reset', { method: 'POST' });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+    throw new Error(body?.detail ?? 'Reset failed');
+  }
+  return res.json();
+}
+
+export async function clearBrowserCaches(): Promise<void> {
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
+  }
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch {
+    /* kiosk may block storage */
+  }
+}

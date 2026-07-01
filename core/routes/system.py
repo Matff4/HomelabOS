@@ -8,6 +8,7 @@ from fastapi.responses import Response
 
 from core.models.api import DisplayInfo, PowerRequest, SystemStats
 from core.services.backup import create_data_backup
+from core.services.soft_reset import soft_reset
 from core.services.system import collect_system_stats, detect_display
 from core.settings import settings
 
@@ -57,6 +58,7 @@ async def system_power(body: PowerRequest) -> dict[str, str]:
 
 @router.get("/api/system/backup")
 async def system_backup() -> Response:
+    """Dev/SSH use — not exposed in kiosk UI."""
     payload = create_data_backup(settings.data_dir)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     return Response(
@@ -64,3 +66,8 @@ async def system_backup() -> Response:
         media_type="application/gzip",
         headers={"Content-Disposition": f'attachment; filename="homelabos-data-{stamp}.tar.gz"'},
     )
+
+
+@router.post("/api/system/soft-reset")
+async def system_soft_reset() -> dict:
+    return soft_reset()

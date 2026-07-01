@@ -58,6 +58,11 @@ body.bar-small { --tb-h: 36px; }
 body.bar-medium { --tb-h: 48px; }
 body.bar-big { --tb-h: 64px; }
 
+body.kiosk-mode,
+body.kiosk-mode * {
+  cursor: none !important;
+}
+
 body.booting .workspace-viewport {
   visibility: hidden;
 }

@@ -210,7 +210,27 @@ def test_plugin_remove_clears_layout_widgets(client, tmp_path):
     assert client.get("/api/layout").json() == []
 
 
-def test_event_bus_publish():
+def test_system_soft_reset(client):
+    layout_item = {
+        "instance_id": "inst_1",
+        "component_id": "demo_widget",
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 2,
+        "pane": 1,
+        "config": {},
+    }
+    client.put("/api/layout", json=[layout_item])
+    client.put("/api/config", json={"paneCount": 2, "taskbarActions": ["my_btn"]})
+
+    response = client.post("/api/system/soft-reset")
+    assert response.status_code == 200
+
+    assert client.get("/api/layout").json() == []
+    config = client.get("/api/config").json()
+    assert config["paneCount"] == 1
+    assert config["taskbarActions"] == []
     import asyncio
 
     from core.events.bus import EventBus
