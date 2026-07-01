@@ -77,6 +77,11 @@ async function boot(): Promise<void> {
         workspace.updateConfig(next);
       });
     });
+    taskbar.onStore(() => {
+      modals.openStore(() => {
+        void workspace.refreshPlugins();
+      });
+    });
     taskbar.onPower(() => modals.openPower());
 
     document.body.dataset.shellReady = '1';

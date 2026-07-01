@@ -84,13 +84,13 @@ Core stays stable; plugins move fast without breaking the kiosk.
 - [x] `api_version` + HomelabOS version checks on install
 - [x] Service reload strategy documented (restart vs hot-mount)
 
-### Phase 5 — Marketplace UI (~1 week) ← **current**
-- [ ] Default `marketplaceUrl` → HomelabOS-Plugins `index.json`
-- [ ] Shell store: browse catalog, install, list installed, update available
-- [ ] Settings: configure marketplace URL
-- [ ] HomelabOS-Plugins repo v0.1 (catalog + one non-demo plugin)
+### Phase 5 — Marketplace UI ✅
+- [x] Default `marketplaceUrl` → HomelabOS-Plugins `index.json`
+- [x] Shell store: browse catalog, install, list installed, update available
+- [x] Settings: configure marketplace URL
+- [x] Catalog schema + docs (`docs/MARKETPLACE.md`) for HomelabOS-Plugins repo bootstrap
 
-### Phase 6 — Plugin content (ongoing, in HomelabOS-Plugins)
+### Phase 6 — Plugin content (ongoing, in HomelabOS-Plugins) ← **current**
 - [ ] Reference plugin beyond demo (e.g. simple GPIO or read-only PVE)
 - [ ] PVE integration (full)
 - [ ] ESXi, fan control, and community plugins
@@ -154,7 +154,9 @@ HomelabOS.getConfig() / .saveConfig(obj)
 
 **Phase 4 complete** — install/update/delete API + registry.
 
-**Next: Phase 5** — in-shell store + HomelabOS-Plugins catalog repo.
+**Phase 5 complete** — in-shell plugin store + marketplace API.
+
+**Next: Phase 6** — real plugins in [HomelabOS-Plugins](https://github.com/Matff4/HomelabOS-Plugins) (PVE, GPIO, …).
 
 ## Performance goals (Phase 7)
 

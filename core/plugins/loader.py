@@ -102,9 +102,16 @@ class PluginManager:
                 "name": plugin.manifest.name,
                 "version": plugin.manifest.version,
                 "enabled": True,
+                "bundled": self._is_bundled(plugin),
             }
             for plugin in self.plugins.values()
         ]
+
+    def _is_bundled(self, plugin: LoadedPlugin) -> bool:
+        try:
+            return plugin.directory.resolve().is_relative_to(self.bundled_dir.resolve())
+        except (ValueError, OSError):
+            return plugin.directory.parent.resolve() == self.bundled_dir.resolve()
 
     def components(self) -> list[dict]:
         rows: list[dict] = []

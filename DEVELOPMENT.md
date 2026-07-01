@@ -6,6 +6,8 @@ See [ROADMAP.md](ROADMAP.md) for architecture and phases.
 
 **Plugin authoring (Phase 3):** [docs/PLUGIN_AUTHOR.md](docs/PLUGIN_AUTHOR.md)
 
+**Marketplace (Phase 5):** [docs/MARKETPLACE.md](docs/MARKETPLACE.md)
+
 ## Local development
 
 On your **laptop** (not the Pi), run the API without kiosk hardware:

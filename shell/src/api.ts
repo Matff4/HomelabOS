@@ -1,4 +1,5 @@
 import type { ComponentInfo, DisplayInfo, LayoutItem, SSEMessage, SystemConfig } from './types';
+import type { MarketplaceCatalog, PluginActionResult, PluginSummary } from './store-types';
 import type { GridCapacity } from './geometry';
 
 const ACCENT: Record<string, string> = {
@@ -29,6 +30,53 @@ export async function saveLayout(layout: LayoutItem[]): Promise<void> {
     body: JSON.stringify(layout),
   });
   if (!res.ok) throw new Error('Failed to save layout');
+}
+
+export async function fetchPlugins(): Promise<PluginSummary[]> {
+  const res = await fetch('/api/plugins');
+  if (!res.ok) throw new Error('Failed to load plugins');
+  return res.json();
+}
+
+export async function fetchMarketplaceCatalog(): Promise<MarketplaceCatalog> {
+  const res = await fetch('/api/marketplace/catalog');
+  if (!res.ok) throw new Error('Failed to load plugin store catalog');
+  return res.json();
+}
+
+export async function installPlugin(url: string): Promise<PluginActionResult> {
+  const res = await fetch('/api/plugins/install', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+    throw new Error(body?.detail ?? 'Install failed');
+  }
+  return res.json();
+}
+
+export async function updatePlugin(id: string, url: string): Promise<PluginActionResult> {
+  const res = await fetch(`/api/plugins/${encodeURIComponent(id)}/update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+    throw new Error(body?.detail ?? 'Update failed');
+  }
+  return res.json();
+}
+
+export async function deletePlugin(id: string): Promise<PluginActionResult> {
+  const res = await fetch(`/api/plugins/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+    throw new Error(body?.detail ?? 'Remove failed');
+  }
+  return res.json();
 }
 
 export async function fetchComponents(): Promise<ComponentInfo[]> {

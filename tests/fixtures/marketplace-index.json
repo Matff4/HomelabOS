@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-30T00:00:00+00:00",
+  "plugins": [
+    {
+      "id": "sample",
+      "name": "Sample Plugin",
+      "version": "1.0.0",
+      "description": "Reference store entry for local development and tests.",
+      "icon": "widgets",
+      "tarball_url": "file://PLACEHOLDER/sample.tgz",
+      "api_version": 1,
+      "homelabos_min": "1.0.0"
+    }
+  ]
+}

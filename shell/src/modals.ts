@@ -2,6 +2,7 @@ import type { ComponentInfo, SystemConfig } from './types';
 import { applyTheme, saveConfig } from './api';
 import { selectOptions } from './format';
 import { icon, icons } from './icons';
+import { openPluginStore } from './store-modal';
 
 type ConfirmHandler = () => void | Promise<void>;
 
@@ -25,6 +26,33 @@ export class Modals {
   close(): void {
     this.root.hidden = true;
     this.root.innerHTML = '';
+  }
+
+  /** Render modal HTML and wire close buttons (used by store UI). */
+  openShell(content: string): void {
+    this.open(content);
+  }
+
+  querySelector<T extends Element = Element>(selector: string): T | null {
+    return this.root.querySelector(selector);
+  }
+
+  alert(title: string, message: string): void {
+    this.open(`
+      <div class="modal-backdrop">
+        <div class="modal-card modal-compact">
+          <div class="modal-header"><h2>${title}</h2></div>
+          <div class="modal-body"><p class="store-alert">${message.replace(/\n/g, '<br>')}</p></div>
+          <div class="modal-footer">
+            <button type="button" class="modal-btn primary" data-modal-close>OK</button>
+          </div>
+        </div>
+      </div>
+    `);
+  }
+
+  openStore(onChanged: () => void): void {
+    openPluginStore(this, onChanged);
   }
 
   confirm(title: string, message: string, onConfirm: ConfirmHandler, danger = true): void {
@@ -79,6 +107,11 @@ export class Modals {
               <label class="setting-row">Widget title bar
                 <select name="widgetBarHeight">${selectOptions(['small', 'medium', 'big'], config.widgetBarHeight)}</select>
               </label>
+              <label class="setting-row">Plugin store URL
+                <input type="url" name="marketplaceUrl" class="setting-input"
+                  value="${config.marketplaceUrl ?? ''}"
+                  placeholder="https://raw.githubusercontent.com/…/index.json" />
+              </label>
             </div>
           </form>
           <div class="modal-footer">
@@ -93,6 +126,7 @@ export class Modals {
     form?.addEventListener('submit', (event) => {
       event.preventDefault();
       const data = new FormData(form);
+      const rawMarketplace = String(data.get('marketplaceUrl') ?? '').trim();
       const next: SystemConfig = {
         ...config,
         theme: data.get('theme') as SystemConfig['theme'],
@@ -101,6 +135,7 @@ export class Modals {
         ramFormat: data.get('ramFormat') as SystemConfig['ramFormat'],
         barHeight: data.get('barHeight') as SystemConfig['barHeight'],
         widgetBarHeight: data.get('widgetBarHeight') as SystemConfig['widgetBarHeight'],
+        marketplaceUrl: rawMarketplace || null,
       };
       void saveConfig(next).then(() => {
         applyTheme(next);

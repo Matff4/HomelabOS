@@ -1,6 +1,8 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, HttpUrl
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field
+
+from core.constants import DEFAULT_MARKETPLACE_URL
 
 
 TimeFormat = Literal["12", "24"]
@@ -21,4 +23,4 @@ class SystemConfig(BaseModel):
     barHeight: BarHeight = "medium"
     widgetBarHeight: BarHeight = "medium"
     accentColor: AccentColor = "blue"
-    marketplaceUrl: HttpUrl | None = None
+    marketplaceUrl: AnyUrl | None = Field(default=DEFAULT_MARKETPLACE_URL)

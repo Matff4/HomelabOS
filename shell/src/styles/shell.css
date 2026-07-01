@@ -618,6 +618,109 @@ body.theme-light .setting-row select option {
   color: var(--accent);
 }
 
+.setting-input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.store-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.store-tab {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.store-tab.active {
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.store-body {
+  min-height: 120px;
+}
+
+.store-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.store-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.store-row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.store-icon .material-symbols-rounded {
+  font-size: 28px;
+  color: var(--accent);
+}
+
+.store-copy {
+  min-width: 0;
+}
+
+.store-copy strong {
+  display: block;
+}
+
+.store-meta,
+.store-desc {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+}
+
+.store-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.store-action[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.store-error {
+  color: #f38ba8;
+}
+
+.store-tag {
+  font-size: 0.85rem;
+  align-self: center;
+}
+
 .muted {
   color: var(--muted);
 }

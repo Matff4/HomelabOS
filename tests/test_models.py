@@ -24,7 +24,8 @@ def test_system_config_defaults():
     cfg = SystemConfig()
     assert cfg.theme == "dark"
     assert cfg.timeFormat == "24"
-    assert cfg.marketplaceUrl is None
+    assert cfg.marketplaceUrl is not None
+    assert "HomelabOS-Plugins" in str(cfg.marketplaceUrl)
 
 
 def test_system_config_rejects_unknown_fields():

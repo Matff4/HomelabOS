@@ -36,6 +36,9 @@ export class Taskbar {
           <button type="button" class="taskbar-btn" id="btn-edit" title="Edit layout">
             ${icon(icons.edit)}
           </button>
+          <button type="button" class="taskbar-btn" id="btn-store" title="Plugin store">
+            ${icon(icons.store)}
+          </button>
           <button type="button" class="taskbar-btn" id="btn-settings" title="Settings">
             ${icon(icons.settings)}
           </button>
@@ -63,6 +66,10 @@ export class Taskbar {
 
   onSettings(handler: () => void): void {
     this.root.querySelector('#btn-settings')?.addEventListener('click', handler);
+  }
+
+  onStore(handler: () => void): void {
+    this.root.querySelector('#btn-store')?.addEventListener('click', handler);
   }
 
   onPower(handler: () => void): void {

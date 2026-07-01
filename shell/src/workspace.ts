@@ -172,6 +172,10 @@ export class Workspace {
     await saveLayout(this.layout);
   }
 
+  async refreshPlugins(): Promise<void> {
+    this.components = new Map((await fetchComponents()).map((c) => [c.id, c]));
+  }
+
   private currentCapacity(config: SystemConfig): GridCapacity {
     return computeGridCapacity(this.physicalW, this.physicalH, taskbarHeight(config));
   }

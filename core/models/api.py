@@ -52,6 +52,7 @@ class PluginSummary(BaseModel):
     name: str
     version: str
     enabled: bool = True
+    bundled: bool = False
 
 
 class PluginHealth(BaseModel):

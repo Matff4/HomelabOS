@@ -97,6 +97,10 @@ Base URL on device: `http://<pi-ip>:8000`
 
 Plugin static assets: `/apps/{plugin_id}/…` (e.g. widget HTML).
 
+#### `GET /api/marketplace/catalog` → `MarketplaceCatalog`
+
+Proxies the catalog from `SystemConfig.marketplaceUrl` (default: HomelabOS-Plugins `index.json`). See [MARKETPLACE.md](MARKETPLACE.md).
+
 #### `POST /api/plugins/install` — body `PluginInstallRequest`
 
 Installs a plugin tarball into `data/plugins/` and updates `data/registry.json`. Returns:
@@ -340,3 +344,11 @@ This is **not** a separate product mode — the same contracts apply; HAL is moc
 - [x] `scripts/create-plugin.py`
 - [x] `api_version` compatibility documented (above)
 - [ ] Optional structured settings form / `REQUEST_SETTINGS` protocol (deferred)
+
+## Phase 5 checklist
+
+- [x] Default marketplace URL in `SystemConfig`
+- [x] `GET /api/marketplace/catalog`
+- [x] Shell plugin store (browse / install / update / remove)
+- [x] Settings: marketplace URL field
+- [x] `docs/MARKETPLACE.md` catalog schema
