@@ -4,7 +4,7 @@ CORE_VERSION = "1.0.0"
 PLUGIN_API_VERSION = 1
 
 DEFAULT_MARKETPLACE_URL = (
-    "https://raw.githubusercontent.com/Matff4/HomelabOS-Plugins/main/index.json"
+    "https://raw.githubusercontent.com/Matff4/HomelabOS-Plugins/master/index.json"
 )
 
 

@@ -1,6 +1,6 @@
 # HomelabOS Marketplace
 
-The **HomelabOS-Plugins** repository hosts the public plugin catalog. HomelabOS fetches `index.json` from a configurable URL (default: GitHub raw on `main`).
+The **HomelabOS-Plugins** repository hosts the public plugin catalog. HomelabOS fetches `index.json` from a configurable URL (default: GitHub raw on `master`).
 
 ## Catalog format (`index.json`)
 

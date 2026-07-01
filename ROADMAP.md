@@ -91,7 +91,8 @@ Core stays stable; plugins move fast without breaking the kiosk.
 - [x] Catalog schema + docs (`docs/MARKETPLACE.md`) for HomelabOS-Plugins repo bootstrap
 
 ### Phase 6 — Plugin content (ongoing, in HomelabOS-Plugins) ← **current**
-- [ ] Reference plugin beyond demo (e.g. simple GPIO or read-only PVE)
+- [x] HomelabOS-Plugins repo v0.1 — catalog + **uptime** widget ([github.com/Matff4/HomelabOS-Plugins](https://github.com/Matff4/HomelabOS-Plugins))
+- [ ] Reference plugin beyond demo (GPIO, read-only PVE, …)
 - [ ] PVE integration (full)
 - [ ] ESXi, fan control, and community plugins
 - **Not in core** — each plugin has its own release cycle

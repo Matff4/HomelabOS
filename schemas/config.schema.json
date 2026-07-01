@@ -73,7 +73,7 @@
           "type": "null"
         }
       ],
-      "default": "https://raw.githubusercontent.com/Matff4/HomelabOS-Plugins/main/index.json",
+      "default": "https://raw.githubusercontent.com/Matff4/HomelabOS-Plugins/master/index.json",
       "title": "Marketplaceurl"
     }
   },
