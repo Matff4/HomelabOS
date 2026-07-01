@@ -5,6 +5,7 @@ import type { Modals } from './modals';
 import {
   accentColor,
   fetchComponents,
+  fetchLayout,
   patchWidgetConfig,
   saveConfig,
   saveLayout,
@@ -53,7 +54,14 @@ export class Workspace {
   private iframeByInstance = new Map<string, HTMLIFrameElement>();
   private instancePane = new Map<string, number>();
   private messageHandler: ((event: MessageEvent) => void) | null = null;
-  private touchStartX = 0;
+  private paneSwipe = {
+    tracking: false,
+    dragging: false,
+    startX: 0,
+    startY: 0,
+    startTime: 0,
+    pointerId: -1,
+  };
 
   constructor(
     private readonly slider: HTMLElement,
@@ -80,7 +88,9 @@ export class Workspace {
 
     const capacity = this.currentCapacity(config);
     this.layout = layout.map((item) => clampLayoutItem(item, capacity));
+    await this.pruneOrphanLayout();
     this.renderGrid();
+    this.bindPaneSwipe();
 
     window.addEventListener('resize', () => this.onResize());
     shellSSE.onMessage((message) => {
@@ -183,6 +193,7 @@ export class Workspace {
     };
     this.layout.push(clampLayoutItem(item, this.spec));
     await saveLayout(this.layout);
+    this.clearPaneEmptyState(this.activePane);
     this.mountWidget(item, component, this.activePane);
   }
 
@@ -208,11 +219,47 @@ export class Workspace {
     this.iframeByInstance.delete(instanceId);
     this.instancePane.delete(instanceId);
     await saveLayout(this.layout);
+    this.ensurePaneEmptyState(pane);
   }
 
   async refreshPlugins(): Promise<void> {
     this.components = new Map((await fetchComponents()).map((c) => [c.id, c]));
+    this.layout = await fetchLayout();
+    await this.pruneOrphanLayout();
     this.renderGrid();
+  }
+
+  private async pruneOrphanLayout(): Promise<void> {
+    const valid = new Set(this.components.keys());
+    const pruned = this.layout.filter((item) => valid.has(item.component_id));
+    if (pruned.length === this.layout.length) return;
+    this.layout = pruned;
+    await saveLayout(pruned);
+  }
+
+  private paneStage(pane: number): HTMLElement | null {
+    return this.trackEl?.querySelector(`[data-pane="${pane}"] .grid-stage`) ?? null;
+  }
+
+  private clearPaneEmptyState(pane: number): void {
+    this.paneStage(pane)?.querySelector('.widget-empty')?.remove();
+  }
+
+  private ensurePaneEmptyState(pane: number): void {
+    const hasWidgets = this.layout.some((item) => item.pane === pane);
+    if (hasWidgets) {
+      this.clearPaneEmptyState(pane);
+      return;
+    }
+    const stage = this.paneStage(pane);
+    if (!stage || stage.querySelector('.widget-empty')) return;
+    const empty = document.createElement('div');
+    empty.className = 'widget-empty';
+    empty.textContent =
+      pane === this.activePane
+        ? 'No widgets — tap Edit, then + to add one.'
+        : 'Empty page';
+    stage.appendChild(empty);
   }
 
   private resolvePaneCount(config: SystemConfig, layout: LayoutItem[]): number {
@@ -275,9 +322,8 @@ export class Workspace {
 
     this.slider.innerHTML = '';
     this.trackEl = document.createElement('div');
-    this.trackEl.className = 'pane-track';
+    this.trackEl.className = 'pane-track pane-animating';
     this.slider.appendChild(this.trackEl);
-    this.bindPaneSwipe(this.trackEl);
 
     for (let pane = 0; pane < this.paneCount; pane += 1) {
       this.buildPane(pane, spec);
@@ -349,43 +395,95 @@ export class Workspace {
 
     paneItems.forEach((item) => {
       const component = this.components.get(item.component_id);
-      if (component) {
-        this.mountWidget(item, component, pane);
-        return;
-      }
-      this.mountUnavailableWidget(item, pane, 'Plugin unavailable or incompatible');
+      if (component) this.mountWidget(item, component, pane);
     });
   }
 
   private applyPaneTransform(): void {
     if (!this.trackEl) return;
+    this.trackEl.classList.add('pane-animating');
     this.trackEl.style.transform = `translateX(-${this.activePane * 100}%)`;
     this.trackEl.querySelectorAll('.workspace-pane').forEach((el, index) => {
       el.classList.toggle('pane-active', index === this.activePane);
     });
   }
 
-  private bindPaneSwipe(track: HTMLElement): void {
-    track.addEventListener(
-      'touchstart',
+  private bindPaneSwipe(): void {
+    const target = this.slider;
+
+    const resetSwipe = (): void => {
+      this.paneSwipe.tracking = false;
+      this.paneSwipe.dragging = false;
+      this.paneSwipe.pointerId = -1;
+      document.body.classList.remove('pane-swiping');
+      this.trackEl?.classList.remove('pane-dragging');
+    };
+
+    target.addEventListener('pointerdown', (event) => {
+      if (this.editMode || this.paneCount <= 1) return;
+      if (event.button !== 0) return;
+      this.paneSwipe.tracking = true;
+      this.paneSwipe.dragging = false;
+      this.paneSwipe.startX = event.clientX;
+      this.paneSwipe.startY = event.clientY;
+      this.paneSwipe.startTime = Date.now();
+      this.paneSwipe.pointerId = event.pointerId;
+    });
+
+    target.addEventListener(
+      'pointermove',
       (event) => {
-        if (this.paneCount <= 1) return;
-        this.touchStartX = event.changedTouches[0]?.clientX ?? 0;
+        if (!this.paneSwipe.tracking || event.pointerId !== this.paneSwipe.pointerId) return;
+
+        const dx = event.clientX - this.paneSwipe.startX;
+        const dy = event.clientY - this.paneSwipe.startY;
+
+        if (!this.paneSwipe.dragging) {
+          if (Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+          this.paneSwipe.dragging = true;
+          document.body.classList.add('pane-swiping');
+          this.trackEl?.classList.add('pane-dragging');
+          this.trackEl?.classList.remove('pane-animating');
+          target.setPointerCapture(event.pointerId);
+        }
+
+        if (!this.trackEl) return;
+        const width = target.clientWidth || 1;
+        const base = -this.activePane * width;
+        let offset = base + dx;
+        const min = -(this.paneCount - 1) * width;
+        const max = 0;
+        if (offset > max) offset = max + (offset - max) * 0.3;
+        if (offset < min) offset = min + (offset - min) * 0.3;
+        this.trackEl.style.transform = `translateX(${offset}px)`;
       },
       { passive: true },
     );
-    track.addEventListener(
-      'touchend',
-      (event) => {
-        if (this.paneCount <= 1) return;
-        const endX = event.changedTouches[0]?.clientX ?? 0;
-        const delta = endX - this.touchStartX;
-        if (Math.abs(delta) < 60) return;
-        if (delta < 0) this.nextPane();
-        else this.prevPane();
-      },
-      { passive: true },
-    );
+
+    const finishSwipe = (event: PointerEvent): void => {
+      if (!this.paneSwipe.tracking || event.pointerId !== this.paneSwipe.pointerId) return;
+
+      if (this.paneSwipe.dragging) {
+        const dx = event.clientX - this.paneSwipe.startX;
+        const dt = Math.max(Date.now() - this.paneSwipe.startTime, 1);
+        const velocity = dx / dt;
+        const width = target.clientWidth || 1;
+        const threshold = width * 0.18;
+
+        if (dx <= -threshold || velocity <= -0.55) this.nextPane();
+        else if (dx >= threshold || velocity >= 0.55) this.prevPane();
+        else this.applyPaneTransform();
+
+        if (target.hasPointerCapture(event.pointerId)) {
+          target.releasePointerCapture(event.pointerId);
+        }
+      }
+
+      resetSwipe();
+    };
+
+    target.addEventListener('pointerup', finishSwipe);
+    target.addEventListener('pointercancel', finishSwipe);
   }
 
   private applyGridSize(gridEl: HTMLElement, spec: GridSpec): void {
@@ -504,57 +602,6 @@ export class Workspace {
     this.iframeByInstance.set(clamped.instance_id, iframe);
     content.appendChild(header);
     content.appendChild(iframe);
-
-    grid.addWidget({
-      id: clamped.instance_id,
-      x: clamped.x,
-      y: clamped.y,
-      w: clamped.w,
-      h: clamped.h,
-    });
-
-    const mountContent = (): void => {
-      const node = grid.engine.nodes.find((n) => n.id === clamped.instance_id);
-      const slot = node?.el?.querySelector('.grid-stack-item-content');
-      if (!slot) return;
-      slot.innerHTML = '';
-      slot.appendChild(content);
-    };
-    mountContent();
-    if (!content.isConnected) requestAnimationFrame(mountContent);
-  }
-
-  private mountUnavailableWidget(item: LayoutItem, pane: number, reason: string): void {
-    const grid = this.grids.get(pane);
-    if (!grid || !this.spec) return;
-
-    const clamped = clampLayoutItem(item, this.spec);
-    this.instancePane.set(clamped.instance_id, pane);
-
-    const content = document.createElement('div');
-    content.className = 'widget-card widget-unavailable';
-
-    const header = document.createElement('div');
-    header.className = 'widget-header';
-    header.innerHTML = `
-      ${icon(icons.widget)}
-      <span class="widget-title">Unavailable</span>
-      <button type="button" class="widget-delete-btn" title="Remove widget">
-        ${icon(icons.close)}
-      </button>
-    `;
-
-    header.querySelector('.widget-delete-btn')?.addEventListener('click', (event) => {
-      event.stopPropagation();
-      void this.removeWidget(clamped.instance_id);
-    });
-
-    const body = document.createElement('div');
-    body.className = 'widget-unavailable-body';
-    body.innerHTML = `<p>${reason}</p><p class="muted"><code>${clamped.component_id}</code></p>`;
-
-    content.appendChild(header);
-    content.appendChild(body);
 
     grid.addWidget({
       id: clamped.instance_id,

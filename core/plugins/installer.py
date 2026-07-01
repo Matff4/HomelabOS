@@ -20,6 +20,7 @@ from core.constants import PLUGIN_API_VERSION
 from core.models.manifest import PluginManifest
 from core.models.registry import PluginRegistry, RegistryEntry
 from core.plugins.compatibility import core_meets_requirement
+from core.services.layout_cleanup import component_ids_for_plugin, remove_layout_items_for_components
 from core.storage.registry_store import registry_store
 
 logger = logging.getLogger(__name__)
@@ -149,7 +150,9 @@ def remove_installed_plugin(plugin_id: str, *, bundled_dir: Path, user_dir: Path
     if not dest.is_dir():
         raise PluginInstallError(f"Plugin {plugin_id!r} is not installed", status_code=404)
 
+    component_ids = component_ids_for_plugin(dest)
     shutil.rmtree(dest)
+    remove_layout_items_for_components(component_ids)
     registry = registry_store().read()
     registry.plugins = [row for row in registry.plugins if row.id != plugin_id]
     registry_store().write(registry)

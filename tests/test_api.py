@@ -183,6 +183,31 @@ def test_plugin_install_from_tarball(client, tmp_path):
     delete = client.delete("/api/plugins/sample")
     assert delete.status_code == 200
     assert client.get("/api/plugins").json() == []
+    assert client.get("/api/layout").json() == []
+
+
+def test_plugin_remove_clears_layout_widgets(client, tmp_path):
+    archive = tmp_path / "sample.tgz"
+    _write_plugin_tarball(archive)
+    url = archive.as_uri()
+
+    client.post("/api/plugins/install", json={"url": url})
+    layout_item = {
+        "instance_id": "inst_sample",
+        "component_id": "sample_widget",
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 2,
+        "pane": 0,
+        "config": {},
+    }
+    client.put("/api/layout", json=[layout_item])
+    assert len(client.get("/api/layout").json()) == 1
+
+    delete = client.delete("/api/plugins/sample")
+    assert delete.status_code == 200
+    assert client.get("/api/layout").json() == []
 
 
 def test_event_bus_publish():
