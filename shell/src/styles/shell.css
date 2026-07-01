@@ -928,7 +928,9 @@ body.edit-mode .grid-launcher-delete {
   display: inline-flex;
 }
 
-body.edit-mode .grid-launcher-hit {
+body.edit-mode .grid-launcher-hit,
+body.edit-mode .grid-launcher-app .grid-launcher-hit,
+body.edit-mode .grid-launcher-action .grid-launcher-hit {
   cursor: grab;
   pointer-events: none;
 }

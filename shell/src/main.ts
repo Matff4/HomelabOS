@@ -9,6 +9,7 @@ import {
   fetchDisplay,
   fetchLayout,
   fetchPlatform,
+  saveConfig,
   shellSSE,
 } from './api';
 import { closeAppOverlay, openAppOverlay } from './app-overlay';
@@ -32,7 +33,12 @@ function syncBrowserViewport(): void {
 
 async function boot(): Promise<void> {
   try {
-    const [config, platform] = await Promise.all([fetchConfig(), fetchPlatform()]);
+    let config = await fetchConfig();
+    // Grid launchers replaced taskbar-pinned actions — clear legacy config ASAP.
+    if (config.taskbarActions?.length) {
+      config = await saveConfig({ ...config, taskbarActions: [] });
+    }
+    const platform = await fetchPlatform();
     applyTheme(config);
 
     const display = await fetchDisplay().catch(() => null);
@@ -115,6 +121,7 @@ async function boot(): Promise<void> {
     taskbar.onPower(() => modals.openPower(kiosk));
 
     document.body.dataset.shellReady = '1';
+    document.body.dataset.shellLayout = 'grid-launchers-v2';
     document.body.dataset.coreVersion = platform.core_version;
     document.body.dataset.pluginApiVersion = String(platform.plugin_api_version);
     const tbH = taskbarHeight(config);

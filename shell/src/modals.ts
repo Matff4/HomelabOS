@@ -239,16 +239,16 @@ export class Modals {
     this.open(renderAddDrawer(components));
     bindAddDrawer(this.root, components, {
       onWidget: (component) => {
-        handlers.onWidget(component);
         this.close();
+        window.setTimeout(() => handlers.onWidget(component), 0);
       },
       onApp: (component) => {
-        handlers.onApp(component);
         this.close();
+        window.setTimeout(() => handlers.onApp(component), 0);
       },
       onAction: (component) => {
-        handlers.onAction(component);
         this.close();
+        window.setTimeout(() => handlers.onAction(component), 0);
       },
     });
   }

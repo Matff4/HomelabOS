@@ -64,6 +64,8 @@ export class Workspace {
     startTime: 0,
     pointerId: -1,
   };
+  /** Suppress accidental launch when a tile was just placed from the add drawer. */
+  private launcherArmUntil = new Map<string, number>();
 
   constructor(
     private readonly slider: HTMLElement,
@@ -201,6 +203,18 @@ export class Workspace {
     await saveLayout(this.layout);
     this.clearPaneEmptyState(this.activePane);
     this.mountGridItem(item, component, this.activePane);
+    if (component.type === 'app' || component.type === 'action') {
+      this.armLauncher(item.instance_id);
+    }
+  }
+
+  private armLauncher(instanceId: string, ms = 700): void {
+    this.launcherArmUntil.set(instanceId, Date.now() + ms);
+  }
+
+  private isLauncherArmed(instanceId: string): boolean {
+    const until = this.launcherArmUntil.get(instanceId);
+    return until !== undefined && Date.now() < until;
   }
 
   /** @deprecated use addGridItem */
@@ -578,10 +592,17 @@ export class Workspace {
       </button>
     `;
 
-    content.querySelector('.grid-launcher-hit')?.addEventListener('click', () => {
+    const activate = (): void => {
       if (this.editMode) return;
+      if (this.isLauncherArmed(clamped.instance_id)) return;
       if (isAction) void this.handleLauncherAction(component, content);
       else this.openApp(component);
+    };
+
+    content.querySelector('.grid-launcher-hit')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      activate();
     });
 
     content.querySelector('.grid-launcher-delete')?.addEventListener('click', (event) => {
