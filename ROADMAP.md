@@ -63,27 +63,28 @@ Core stays stable; plugins move fast without breaking the kiosk.
 - [x] Taskbar via SSE (stats, clock, icon controls)
 - [x] GridStack workspace (drag/resize, float layout, persist to `/api/layout`)
 - [x] Display-aware grid (physical panel → row/col capacity; browser → tile pixel size)
+- [x] Square tiles + inter-widget gaps (GridStack tile margin, display-verified)
 - [x] Modals: settings, power, confirm, app drawer
 - [x] Widget chrome (title bar, configure, remove in edit mode)
 - [x] Widget config modal (`PATCH /api/layout/widget`, JSON editor)
 - [ ] Multi-pane carousel (deferred — layout model supports `pane`, shell uses pane 0 only)
 
-### Phase 3 — SDK + plugin author tooling (~3–4 days) ← **current**
+### Phase 3 — SDK + plugin author tooling ✅
 - [x] `homelabos-sdk` browser package (subscribe, getConfig, saveConfig)
-- [ ] `docs/PLUGIN_AUTHOR.md` (manifest, routes, SDK, config, testing on Pi)
-- [ ] `scripts/create-plugin.py` scaffold
-- [ ] Document `api_version` compatibility rules in CONTRACTS
-- [ ] Optional: `REQUEST_SETTINGS` / `SETTINGS_SCHEMA` iframe protocol (v1 parity)
+- [x] `docs/PLUGIN_AUTHOR.md` (manifest, routes, SDK, config, testing on Pi)
+- [x] `scripts/create-plugin.py` scaffold
+- [x] Document `api_version` compatibility rules in CONTRACTS
+- [ ] Optional: `REQUEST_SETTINGS` / `SETTINGS_SCHEMA` iframe protocol (deferred — JSON config modal today)
 
-### Phase 4 — Plugin platform (~1 week)
-- [ ] `data/registry.json` — installed plugin metadata
-- [ ] `apps/` (bundled demo) + `data/plugins/` (user-installed)
-- [ ] Implement `POST /api/plugins/install` (tarball URL → extract → register)
-- [ ] Implement `POST /api/plugins/{id}/update` and `DELETE /api/plugins/{id}`
-- [ ] `api_version` + HomelabOS version checks on install
-- [ ] Service reload strategy documented (restart vs hot-mount)
+### Phase 4 — Plugin platform ✅
+- [x] `data/registry.json` — installed plugin metadata
+- [x] `apps/` (bundled demo) + `data/plugins/` (user-installed)
+- [x] Implement `POST /api/plugins/install` (tarball URL → extract → register)
+- [x] Implement `POST /api/plugins/{id}/update` and `DELETE /api/plugins/{id}`
+- [x] `api_version` + HomelabOS version checks on install
+- [x] Service reload strategy documented (restart vs hot-mount)
 
-### Phase 5 — Marketplace UI (~1 week)
+### Phase 5 — Marketplace UI (~1 week) ← **current**
 - [ ] Default `marketplaceUrl` → HomelabOS-Plugins `index.json`
 - [ ] Shell store: browse catalog, install, list installed, update available
 - [ ] Settings: configure marketplace URL
@@ -126,9 +127,9 @@ GET  /api/events                    SSE (shell only)
 
 GET  /api/plugins
 GET  /api/plugins/{id}/health
-POST /api/plugins/install           Phase 4
-POST /api/plugins/{id}/update       Phase 4
-DELETE /api/plugins/{id}            Phase 4
+POST /api/plugins/install           Phase 4 ✅
+POST /api/plugins/{id}/update       Phase 4 ✅
+DELETE /api/plugins/{id}            Phase 4 ✅
 
 /api/plugins/{id}/*                 Plugin backend routes
 /apps/{plugin_id}/…                 Plugin static assets
@@ -147,11 +148,13 @@ HomelabOS.getConfig() / .saveConfig(obj)
 
 ## Current sprint
 
-**Phase 2 closed.** Next up:
+**Phase 2 complete** (shell, grid, modals, widget chrome — verified on Pi via VNC).
 
-1. Phase 3 — plugin author docs + `create-plugin.py`
-2. Phase 4 — install/update API + registry
-3. Phase 5 — shell store + HomelabOS-Plugins repo bootstrap
+**Phase 3 complete** — plugin author docs + scaffold.
+
+**Phase 4 complete** — install/update/delete API + registry.
+
+**Next: Phase 5** — in-shell store + HomelabOS-Plugins catalog repo.
 
 ## Performance goals (Phase 7)
 

@@ -4,6 +4,8 @@ See [ROADMAP.md](ROADMAP.md) for architecture and phases.
 
 **Frozen contracts (Phase 0):** [docs/CONTRACTS.md](docs/CONTRACTS.md)
 
+**Plugin authoring (Phase 3):** [docs/PLUGIN_AUTHOR.md](docs/PLUGIN_AUTHOR.md)
+
 ## Local development
 
 On your **laptop** (not the Pi), run the API without kiosk hardware:
@@ -54,6 +56,12 @@ Production build (also builds plugin SDK into `shell/dist/sdk/`):
 
 ```bash
 cd shell && npm install && npm run build
+```
+
+Scaffold a new plugin:
+
+```bash
+python scripts/create-plugin.py my-sensor --name "My Sensor"
 ```
 
 After deploy (`homelabos-update`), the kiosk serves the built shell from `/`.

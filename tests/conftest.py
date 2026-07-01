@@ -23,6 +23,7 @@ def apps_dir(tmp_path):
 def client(data_dir, apps_dir, monkeypatch):
     monkeypatch.setattr(settings, "data_dir", data_dir)
     monkeypatch.setattr(settings, "apps_dir", apps_dir)
+    monkeypatch.setattr(settings, "plugins_dir", data_dir / "plugins")
     monkeypatch.setattr(settings, "dev", True)
     monkeypatch.setattr(settings, "mock_hal", True)
     reset_runtime()
@@ -38,6 +39,7 @@ def client_with_demo(data_dir, apps_dir, monkeypatch):
 
     monkeypatch.setattr(settings, "data_dir", data_dir)
     monkeypatch.setattr(settings, "apps_dir", apps_dir)
+    monkeypatch.setattr(settings, "plugins_dir", data_dir / "plugins")
     monkeypatch.setattr(settings, "dev", True)
     monkeypatch.setattr(settings, "mock_hal", True)
 

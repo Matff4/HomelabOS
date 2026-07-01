@@ -59,21 +59,30 @@ def test_system_stats(client):
     assert "uptime_seconds" in body
 
 
-def test_system_display_mock(client):
+def test_system_display_mock_defaults(client, monkeypatch):
+    monkeypatch.delenv("HOMELABOS_DISPLAY_WIDTH", raising=False)
+    monkeypatch.delenv("HOMELABOS_DISPLAY_HEIGHT", raising=False)
     response = client.get("/api/system/display")
     assert response.status_code == 200
-    body = response.json()
-    assert body == {"width": 1424, "height": 280, "kiosk": False}
+    assert response.json() == {"width": 1920, "height": 1080, "kiosk": False}
 
 
-def test_system_power(client):
+def test_system_display_mock_env_override(client, monkeypatch):
+    monkeypatch.setenv("HOMELABOS_DISPLAY_WIDTH", "1424")
+    monkeypatch.setenv("HOMELABOS_DISPLAY_HEIGHT", "280")
+    response = client.get("/api/system/display")
+    assert response.status_code == 200
+    assert response.json() == {"width": 1424, "height": 280, "kiosk": False}
+
+
+def test_system_power(client, monkeypatch):
+    monkeypatch.setattr("core.routes.system.shutil.which", lambda _: None)
     with patch("core.routes.system.subprocess.Popen") as popen:
         response = client.post("/api/system/power", json={"action": "reboot"})
     assert response.status_code == 200
     assert response.json()["action"] == "reboot"
     popen.assert_called_once()
-    args = popen.call_args[0][0]
-    assert "reboot" in args
+    assert popen.call_args[0][0] == ["systemctl", "reboot"]
 
 
 def test_plugins_empty(client):
@@ -105,8 +114,62 @@ def test_demo_plugin(client_with_demo):
 
 
 def test_plugin_install_not_implemented(client):
-    response = client.post("/api/plugins/install", json={"url": "https://example.com/p.tgz"})
-    assert response.status_code == 501
+    response = client.post("/api/plugins/install", json={"url": "https://example.com/not-a-real.tgz"})
+    assert response.status_code == 502
+
+
+def _write_plugin_tarball(path: Path, plugin_id: str = "sample") -> None:
+    import io
+    import json
+    import tarfile
+
+    manifest = {
+        "id": plugin_id,
+        "name": "Sample Plugin",
+        "version": "1.0.0",
+        "api_version": 1,
+        "backend": "main.py",
+        "components": [
+            {
+                "id": f"{plugin_id}_widget",
+                "type": "widget",
+                "name": "Sample",
+                "entry": "src/widget.html",
+                "size": {"w": 2, "h": 2},
+            }
+        ],
+    }
+    backend = "from fastapi import APIRouter\nrouter = APIRouter()\n"
+    widget = "<!DOCTYPE html><html><body>sample</body></html>"
+
+    with tarfile.open(path, mode="w:gz") as archive:
+        for name, payload in (
+            ("manifest.json", json.dumps(manifest, indent=2).encode()),
+            ("main.py", backend.encode()),
+            ("src/widget.html", widget.encode()),
+        ):
+            info = tarfile.TarInfo(name=name)
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+
+
+def test_plugin_install_from_tarball(client, tmp_path):
+    archive = tmp_path / "sample.tgz"
+    _write_plugin_tarball(archive)
+    url = archive.as_uri()
+
+    response = client.post("/api/plugins/install", json={"url": url})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == "sample"
+    assert body["restart_required"] is True
+
+    plugins = client.get("/api/plugins").json()
+    assert any(row["id"] == "sample" for row in plugins)
+
+    delete = client.delete("/api/plugins/sample")
+    assert delete.status_code == 200
+    assert client.get("/api/plugins").json() == []
 
 
 def test_event_bus_publish():

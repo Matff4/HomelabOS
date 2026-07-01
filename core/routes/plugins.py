@@ -1,6 +1,13 @@
 from fastapi import APIRouter, HTTPException
 
 from core.models.api import ComponentInfo, PluginHealth, PluginInstallRequest, PluginSummary
+from core.plugins.installer import (
+    PluginInstallError,
+    install_error_to_http,
+    install_plugin_from_url,
+    remove_installed_plugin,
+    update_installed_plugin,
+)
 from core.plugins.loader import get_plugin_manager
 from core.settings import settings
 
@@ -9,7 +16,14 @@ router = APIRouter(tags=["plugins"])
 
 def _manager():
     assert settings.apps_dir
-    return get_plugin_manager(settings.apps_dir)
+    assert settings.plugins_dir
+    return get_plugin_manager(settings.apps_dir, settings.plugins_dir)
+
+
+def _paths():
+    assert settings.apps_dir
+    assert settings.plugins_dir
+    return settings.apps_dir, settings.plugins_dir
 
 
 @router.get("/api/components")
@@ -27,16 +41,53 @@ async def plugin_health(plugin_id: str) -> PluginHealth:
     return PluginHealth.model_validate(_manager().health(plugin_id))
 
 
-@router.post("/api/plugins/install", status_code=501)
-async def install_plugin(_body: PluginInstallRequest) -> None:
-    raise HTTPException(status_code=501, detail="Plugin install ships in Phase 5")
+@router.post("/api/plugins/install")
+async def install_plugin(body: PluginInstallRequest) -> dict:
+    bundled_dir, user_dir = _paths()
+    try:
+        entry = install_plugin_from_url(body.url, bundled_dir=bundled_dir, user_dir=user_dir)
+    except PluginInstallError as exc:
+        raise install_error_to_http(exc) from exc
+    _manager().discover()
+    return {
+        "id": entry.id,
+        "version": entry.version,
+        "restart_required": True,
+        "message": "Plugin installed. Restart homelabos.service to load backend routes.",
+    }
 
 
-@router.post("/api/plugins/{plugin_id}/update", status_code=501)
-async def update_plugin(plugin_id: str) -> None:
-    raise HTTPException(status_code=501, detail=f"Plugin update for {plugin_id} ships in Phase 5")
+@router.post("/api/plugins/{plugin_id}/update")
+async def update_plugin(plugin_id: str, body: PluginInstallRequest) -> dict:
+    bundled_dir, user_dir = _paths()
+    try:
+        entry = update_installed_plugin(
+            plugin_id,
+            body.url,
+            bundled_dir=bundled_dir,
+            user_dir=user_dir,
+        )
+    except PluginInstallError as exc:
+        raise install_error_to_http(exc) from exc
+    _manager().discover()
+    return {
+        "id": entry.id,
+        "version": entry.version,
+        "restart_required": True,
+        "message": "Plugin updated. Restart homelabos.service to load backend routes.",
+    }
 
 
-@router.delete("/api/plugins/{plugin_id}", status_code=501)
-async def delete_plugin(plugin_id: str) -> None:
-    raise HTTPException(status_code=501, detail=f"Plugin removal for {plugin_id} ships in Phase 5")
+@router.delete("/api/plugins/{plugin_id}")
+async def delete_plugin(plugin_id: str) -> dict:
+    bundled_dir, user_dir = _paths()
+    try:
+        remove_installed_plugin(plugin_id, bundled_dir=bundled_dir, user_dir=user_dir)
+    except PluginInstallError as exc:
+        raise install_error_to_http(exc) from exc
+    _manager().discover()
+    return {
+        "id": plugin_id,
+        "restart_required": True,
+        "message": "Plugin removed. Restart homelabos.service to unload backend routes.",
+    }

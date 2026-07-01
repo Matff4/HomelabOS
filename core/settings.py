@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     root_dir: Path = Path(__file__).resolve().parent.parent
     data_dir: Path | None = None
     apps_dir: Path | None = None
+    plugins_dir: Path | None = None
     shell_dist_dir: Path | None = None
 
     def model_post_init(self, __context) -> None:
@@ -22,6 +23,8 @@ class Settings(BaseSettings):
             object.__setattr__(self, "data_dir", self.root_dir / "data")
         if self.apps_dir is None:
             object.__setattr__(self, "apps_dir", self.root_dir / "apps")
+        if self.plugins_dir is None:
+            object.__setattr__(self, "plugins_dir", self.data_dir / "plugins")
         if self.shell_dist_dir is None:
             object.__setattr__(self, "shell_dist_dir", self.root_dir / "shell" / "dist")
 
@@ -34,6 +37,11 @@ class Settings(BaseSettings):
     def layout_path(self) -> Path:
         assert self.data_dir
         return self.data_dir / "layout.json"
+
+    @property
+    def registry_path(self) -> Path:
+        assert self.data_dir
+        return self.data_dir / "registry.json"
 
 
 settings = Settings()

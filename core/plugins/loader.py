@@ -26,37 +26,36 @@ class LoadedPlugin:
 
 
 class PluginManager:
-    def __init__(self, apps_dir: Path) -> None:
-        self.apps_dir = apps_dir
+    def __init__(self, bundled_dir: Path, user_dir: Path) -> None:
+        self.bundled_dir = bundled_dir
+        self.user_dir = user_dir
         self.plugins: dict[str, LoadedPlugin] = {}
         self._mounted_static: set[str] = set()
 
     def discover(self) -> list[LoadedPlugin]:
         self.plugins.clear()
-        if not self.apps_dir.is_dir():
-            return []
-
-        loaded: list[LoadedPlugin] = []
-        for entry in sorted(self.apps_dir.iterdir()):
-            if not entry.is_dir():
+        for root in (self.bundled_dir, self.user_dir):
+            if not root.is_dir():
                 continue
-            manifest_path = entry / "manifest.json"
-            if not manifest_path.is_file():
-                continue
-            try:
-                raw = json.loads(manifest_path.read_text(encoding="utf-8"))
-                manifest = PluginManifest.model_validate(raw)
-            except (json.JSONDecodeError, ValidationError) as exc:
-                logger.warning("Skipping plugin %s: invalid manifest (%s)", entry.name, exc)
-                continue
-            if manifest.id != entry.name:
-                logger.warning(
-                    "Plugin folder %s id mismatch (manifest.id=%s)", entry.name, manifest.id
-                )
-            plugin = LoadedPlugin(manifest=manifest, directory=entry, backend_loaded=False)
-            self.plugins[manifest.id] = plugin
-            loaded.append(plugin)
-        return loaded
+            for entry in sorted(root.iterdir()):
+                if not entry.is_dir():
+                    continue
+                manifest_path = entry / "manifest.json"
+                if not manifest_path.is_file():
+                    continue
+                try:
+                    raw = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    manifest = PluginManifest.model_validate(raw)
+                except (json.JSONDecodeError, ValidationError) as exc:
+                    logger.warning("Skipping plugin %s: invalid manifest (%s)", entry.name, exc)
+                    continue
+                if manifest.id != entry.name:
+                    logger.warning(
+                        "Plugin folder %s id mismatch (manifest.id=%s)", entry.name, manifest.id
+                    )
+                plugin = LoadedPlugin(manifest=manifest, directory=entry, backend_loaded=False)
+                self.plugins[manifest.id] = plugin
+        return list(self.plugins.values())
 
     def mount(self, app: FastAPI) -> None:
         for plugin in self.plugins.values():
@@ -139,10 +138,10 @@ class PluginManager:
 _manager: PluginManager | None = None
 
 
-def get_plugin_manager(apps_dir: Path) -> PluginManager:
+def get_plugin_manager(bundled_dir: Path, user_dir: Path) -> PluginManager:
     global _manager
     if _manager is None:
-        _manager = PluginManager(apps_dir)
+        _manager = PluginManager(bundled_dir, user_dir)
     return _manager
 
 

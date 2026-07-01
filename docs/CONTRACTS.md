@@ -22,7 +22,21 @@ python scripts/generate_schemas.py
 
 Breaking changes require bumping the relevant version and updating this document.
 
----
+### `api_version` compatibility (plugins)
+
+| Core (`CORE_VERSION`) | Accepts `manifest.api_version` | Notes |
+|-----------------------|-------------------------------|--------|
+| `1.0.x` | `1` only | Validated at discovery via Pydantic `Literal[1]` |
+
+Rules:
+
+- **`api_version`** is the manifest/loader contract, independent of the plugin’s own `version` field.
+- Core **1.0.x** loads only manifests with `api_version: 1`. Invalid manifests are skipped at discovery (logged, not fatal).
+- **`requires.core`** (optional semver in manifest) is stored but **not enforced** until Phase 4 install/update.
+- **Phase 4 install** will reject plugins when `api_version` exceeds `PLUGIN_API_VERSION` in `core/constants.py`.
+- A future **HomelabOS 2.x** may introduce `api_version: 2` with updated manifest fields and SDK messages — ship together with a core bump.
+
+Authoring guide: [PLUGIN_AUTHOR.md](PLUGIN_AUTHOR.md).
 
 ## Persistence
 
@@ -83,13 +97,28 @@ Base URL on device: `http://<pi-ip>:8000`
 
 Plugin static assets: `/apps/{plugin_id}/…` (e.g. widget HTML).
 
-#### Not implemented yet (Phase 5)
+#### `POST /api/plugins/install` — body `PluginInstallRequest`
 
-- `POST /api/plugins/install`
-- `POST /api/plugins/{id}/update`
-- `DELETE /api/plugins/{id}`
+Installs a plugin tarball into `data/plugins/` and updates `data/registry.json`. Returns:
 
-(return HTTP 501 until marketplace ships)
+```json
+{
+  "id": "my-plugin",
+  "version": "1.0.0",
+  "restart_required": true,
+  "message": "Plugin installed. Restart homelabos.service to load backend routes."
+}
+```
+
+Static assets are available after `discover()`; **backend routes require a service restart** (FastAPI mounts routers at startup).
+
+#### `POST /api/plugins/{id}/update` — body `PluginInstallRequest`
+
+Same response shape as install. Replaces the user-installed plugin directory.
+
+#### `DELETE /api/plugins/{id}`
+
+Removes a user-installed plugin from `data/plugins/`. Bundled plugins under `apps/` cannot be removed (409).
 
 ### Reference — frozen shapes
 
@@ -251,7 +280,7 @@ HomelabOS.getConfig()      // per-instance widget config
 HomelabOS.saveConfig(obj)  // persist via shell postMessage
 ```
 
-Implementation ships in Phase 3; TypeScript types and stub exist in `sdk/src/` from Phase 0.
+Implemented in `sdk/src/`, built to `shell/dist/sdk/homelabos-sdk.js`. Author guide: [PLUGIN_AUTHOR.md](PLUGIN_AUTHOR.md).
 
 ### iframe query params (shell → widget)
 
@@ -292,3 +321,22 @@ This is **not** a separate product mode — the same contracts apply; HAL is moc
 - [x] Plugin loader + `apps/demo/`
 - [x] HAL mock (`HOMELABOS_DEV=1`) + gpiozero on Pi
 - [x] pytest (`tests/test_api.py`, `tests/test_hal.py`)
+
+## Phase 2 checklist
+
+- [x] Vite + TypeScript shell (taskbar, workspace)
+- [x] SSE relay to widget iframes (single shell connection)
+- [x] GridStack workspace (drag/resize, float, persist layout)
+- [x] Display-aware grid geometry (physical capacity + viewport tile size)
+- [x] Square tiles and inter-widget gaps
+- [x] Settings, power, confirm, and app drawer modals
+- [x] Widget chrome + config modal (`PATCH /api/layout/widget`)
+- [ ] Multi-pane carousel (deferred)
+
+## Phase 3 checklist
+
+- [x] `homelabos-sdk` browser package
+- [x] `docs/PLUGIN_AUTHOR.md`
+- [x] `scripts/create-plugin.py`
+- [x] `api_version` compatibility documented (above)
+- [ ] Optional structured settings form / `REQUEST_SETTINGS` protocol (deferred)

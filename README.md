@@ -43,7 +43,7 @@ sudo /opt/homelabos/scripts/dev-vnc.sh status
 
 ## Development (local machine)
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) and [docs/CONTRACTS.md](docs/CONTRACTS.md).
+See [DEVELOPMENT.md](DEVELOPMENT.md), [docs/CONTRACTS.md](docs/CONTRACTS.md), and [docs/PLUGIN_AUTHOR.md](docs/PLUGIN_AUTHOR.md).
 
 ```bash
 python scripts/dev.py

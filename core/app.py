@@ -38,7 +38,10 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         publisher.cancel()
-        await asyncio.gather(publisher, return_exceptions=True)
+        try:
+            await asyncio.wait_for(asyncio.gather(publisher, return_exceptions=True), timeout=5.0)
+        except asyncio.TimeoutError:
+            logger.warning("Background publishers did not exit within 5s")
         bus.stop()
         get_hal(mock=settings.mock_hal).cleanup_all()
         logger.info("HomelabOS shutting down")
@@ -59,7 +62,8 @@ def create_app() -> FastAPI:
     app.include_router(api_router)
 
     assert settings.apps_dir
-    plugin_manager = get_plugin_manager(settings.apps_dir)
+    assert settings.plugins_dir
+    plugin_manager = get_plugin_manager(settings.apps_dir, settings.plugins_dir)
     plugin_manager.discover()
     plugin_manager.mount(app)
 
