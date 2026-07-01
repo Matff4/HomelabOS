@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 import shutil
 import tarfile
 import tempfile
@@ -20,30 +19,16 @@ from core import __version__
 from core.constants import PLUGIN_API_VERSION
 from core.models.manifest import PluginManifest
 from core.models.registry import PluginRegistry, RegistryEntry
+from core.plugins.compatibility import core_meets_requirement
 from core.storage.registry_store import registry_store
 
 logger = logging.getLogger(__name__)
-
-_SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
 
 class PluginInstallError(Exception):
     def __init__(self, message: str, status_code: int = 400) -> None:
         super().__init__(message)
         self.status_code = status_code
-
-
-def _semver_tuple(value: str) -> tuple[int, int, int]:
-    match = _SEMVER.match(value)
-    if not match:
-        raise PluginInstallError(f"Invalid semver: {value}")
-    return int(match.group(1)), int(match.group(2)), int(match.group(3))
-
-
-def core_meets_requirement(requires: str | None) -> bool:
-    if not requires:
-        return True
-    return _semver_tuple(__version__) >= _semver_tuple(requires)
 
 
 def _download(url: str) -> bytes:

@@ -160,6 +160,7 @@ export class Modals {
           <div class="modal-header"><h2>Core Management</h2></div>
           <div class="modal-body modal-actions vertical">
             <button type="button" class="modal-btn sys-btn" data-power="restart-kiosk">Restart Kiosk</button>
+            <a class="modal-btn sys-btn" href="/api/system/backup" download>Download data backup</a>
             <button type="button" class="modal-btn sys-btn danger" data-power="reboot">Reboot</button>
             <button type="button" class="modal-btn sys-btn danger" data-power="shutdown">Shutdown</button>
           </div>

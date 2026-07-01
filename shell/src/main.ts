@@ -3,10 +3,11 @@ import './styles/shell.css';
 
 import {
   applyTheme,
-  ensureDemoLayout,
   fetchComponents,
   fetchConfig,
   fetchDisplay,
+  fetchLayout,
+  fetchPlatform,
   shellSSE,
 } from './api';
 import {
@@ -29,7 +30,7 @@ function syncBrowserViewport(): void {
 
 async function boot(): Promise<void> {
   try {
-    const config = await fetchConfig();
+    const [config, platform] = await Promise.all([fetchConfig(), fetchPlatform()]);
     applyTheme(config);
 
     const display = await fetchDisplay().catch(() => null);
@@ -55,13 +56,12 @@ async function boot(): Promise<void> {
 
     const workspace = new Workspace(slider, modals, (enabled) => {
       taskbar.setEditActive(enabled);
+    }, (active, total) => {
+      taskbar.setPaneIndicator(active, total);
     });
 
-    const tbH = taskbarHeight(config);
-    const capacity = computeGridCapacity(physical.width, physical.height, tbH);
-    const components = await fetchComponents();
-    const layout = await ensureDemoLayout(components, capacity);
-    await workspace.init(config, layout, physical, browser);
+    const layout = await fetchLayout();
+    await workspace.init(config, layout, platform, physical, browser);
 
     taskbar.onEditToggle(() => workspace.toggleEditMode());
     taskbar.onAddWidget(() => {
@@ -70,6 +70,9 @@ async function boot(): Promise<void> {
         modals.openDrawer(list, (component) => void workspace.addWidget(component));
       });
     });
+    taskbar.onPanePrev(() => workspace.prevPane());
+    taskbar.onPaneNext(() => workspace.nextPane());
+    taskbar.onAddPane(() => void workspace.addPane());
     taskbar.onSettings(() => {
       modals.openSettings(config, (next) => {
         Object.assign(config, next);
@@ -85,6 +88,10 @@ async function boot(): Promise<void> {
     taskbar.onPower(() => modals.openPower());
 
     document.body.dataset.shellReady = '1';
+    document.body.dataset.coreVersion = platform.core_version;
+    document.body.dataset.pluginApiVersion = String(platform.plugin_api_version);
+    const tbH = taskbarHeight(config);
+    const capacity = computeGridCapacity(physical.width, physical.height, tbH);
     document.body.dataset.gridCapacity = `${capacity.cols}x${capacity.rows}`;
     document.body.dataset.physicalDisplay = `${physical.width}x${physical.height}`;
     document.getElementById('boot-error')?.remove();

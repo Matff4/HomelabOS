@@ -4,6 +4,8 @@ export const icons = {
   ram: 'memory_alt',
   add: 'add_circle',
   addPane: 'post_add',
+  chevronLeft: 'chevron_left',
+  chevronRight: 'chevron_right',
   edit: 'edit',
   settings: 'settings',
   power: 'power_settings_new',

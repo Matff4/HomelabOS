@@ -53,6 +53,16 @@ class PluginSummary(BaseModel):
     version: str
     enabled: bool = True
     bundled: bool = False
+    message: str | None = None
+
+
+class PlatformInfo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    core_version: str
+    plugin_api_version: int = Field(ge=1)
+    sdk_version: str
+    supported_manifest_api_versions: list[int]
 
 
 class PluginHealth(BaseModel):

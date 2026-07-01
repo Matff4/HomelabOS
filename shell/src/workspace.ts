@@ -1,11 +1,12 @@
 import { GridStack } from 'gridstack';
-import type { ComponentInfo, LayoutItem, SystemConfig } from './types';
+import type { ComponentInfo, LayoutItem, PlatformInfo, SystemConfig } from './types';
 import type { GridCapacity, GridSpec } from './geometry';
 import type { Modals } from './modals';
 import {
   accentColor,
   fetchComponents,
   patchWidgetConfig,
+  saveConfig,
   saveLayout,
   shellSSE,
 } from './api';
@@ -24,6 +25,8 @@ import {
 } from './geometry';
 import { icon, icons } from './icons';
 
+const MAX_PANES = 8;
+
 function widgetTitle(item: LayoutItem, component: ComponentInfo): string {
   const custom = item.config?.title;
   if (typeof custom === 'string' && custom.trim()) return custom.trim();
@@ -31,38 +34,48 @@ function widgetTitle(item: LayoutItem, component: ComponentInfo): string {
 }
 
 export class Workspace {
-  private grid: GridStack | null = null;
   private editMode = false;
   private components = new Map<string, ComponentInfo>();
   private layout: LayoutItem[] = [];
   private config: SystemConfig | null = null;
+  private platform: PlatformInfo | null = null;
   private spec: GridSpec | null = null;
   private capacity: GridCapacity | null = null;
-  private gridEl: HTMLElement | null = null;
   private physicalW = 0;
   private physicalH = 0;
   private renderW = 0;
   private renderH = 0;
+  private activePane = 0;
+  private paneCount = 1;
+  private trackEl: HTMLElement | null = null;
+  private grids = new Map<number, GridStack>();
+  private gridEls = new Map<number, HTMLElement>();
   private iframeByInstance = new Map<string, HTMLIFrameElement>();
+  private instancePane = new Map<string, number>();
   private messageHandler: ((event: MessageEvent) => void) | null = null;
+  private touchStartX = 0;
 
   constructor(
     private readonly slider: HTMLElement,
     private readonly modals: Modals,
     private readonly onEditChange: (enabled: boolean) => void,
+    private readonly onPaneChange: (active: number, total: number) => void,
   ) {}
 
   async init(
     config: SystemConfig,
     layout: LayoutItem[],
+    platform: PlatformInfo,
     physical: { width: number; height: number },
     render: { width: number; height: number },
   ): Promise<void> {
     this.config = config;
+    this.platform = platform;
     this.physicalW = physical.width;
     this.physicalH = physical.height;
     this.renderW = render.width;
     this.renderH = render.height;
+    this.paneCount = this.resolvePaneCount(config, layout);
     this.components = new Map((await fetchComponents()).map((c) => [c.id, c]));
 
     const capacity = this.currentCapacity(config);
@@ -90,9 +103,11 @@ export class Workspace {
 
   updateConfig(config: SystemConfig): void {
     const prevBar = this.config ? taskbarHeight(this.config) : 0;
+    const prevPanes = this.paneCount;
     this.config = config;
+    this.paneCount = this.resolvePaneCount(config, this.layout);
     const nextBar = taskbarHeight(config);
-    if (nextBar !== prevBar) {
+    if (nextBar !== prevBar || prevPanes !== this.paneCount) {
       this.renderGrid();
       return;
     }
@@ -110,9 +125,9 @@ export class Workspace {
   setEditMode(enabled: boolean): void {
     this.editMode = enabled;
     document.body.classList.toggle('edit-mode', enabled);
-    this.grid?.setStatic(!enabled);
+    this.grids.forEach((grid) => grid.setStatic(!enabled));
     this.onEditChange(enabled);
-    if (!enabled) void this.persistLayout();
+    if (!enabled) void this.persistAllPanes();
   }
 
   toggleEditMode(): void {
@@ -123,12 +138,33 @@ export class Workspace {
     return this.editMode;
   }
 
-  getSpec(): GridSpec | null {
-    return this.spec;
+  getPaneState(): { active: number; total: number } {
+    return { active: this.activePane, total: this.paneCount };
   }
 
-  getCapacity(): GridCapacity | null {
-    return this.capacity;
+  switchPane(index: number): void {
+    if (index < 0 || index >= this.paneCount || index === this.activePane) return;
+    this.activePane = index;
+    this.applyPaneTransform();
+    this.onPaneChange(this.activePane, this.paneCount);
+  }
+
+  nextPane(): void {
+    this.switchPane((this.activePane + 1) % this.paneCount);
+  }
+
+  prevPane(): void {
+    this.switchPane((this.activePane - 1 + this.paneCount) % this.paneCount);
+  }
+
+  async addPane(): Promise<void> {
+    if (!this.config || this.paneCount >= MAX_PANES) return;
+    this.paneCount += 1;
+    this.config = { ...this.config, paneCount: this.paneCount };
+    await saveConfig(this.config);
+    this.activePane = this.paneCount - 1;
+    this.renderGrid();
+    this.onPaneChange(this.activePane, this.paneCount);
   }
 
   async addWidget(component: ComponentInfo): Promise<void> {
@@ -142,12 +178,12 @@ export class Workspace {
       y: 0,
       w: Math.min(size.w, this.spec.cols),
       h: Math.min(Math.max(size.h, min.h), this.spec.rows),
-      pane: 0,
+      pane: this.activePane,
       config: {},
     };
     this.layout.push(clampLayoutItem(item, this.spec));
     await saveLayout(this.layout);
-    this.mountWidget(item, component);
+    this.mountWidget(item, component, this.activePane);
   }
 
   async applyWidgetConfig(
@@ -164,16 +200,25 @@ export class Workspace {
   }
 
   async removeWidget(instanceId: string): Promise<void> {
-    if (!this.grid) return;
-    const node = this.grid.engine.nodes.find((n) => n.id === instanceId);
-    if (node?.el) this.grid.removeWidget(node.el);
+    const pane = this.instancePane.get(instanceId) ?? 0;
+    const grid = this.grids.get(pane);
+    const node = grid?.engine.nodes.find((n) => n.id === instanceId);
+    if (node?.el) grid?.removeWidget(node.el);
     this.layout = this.layout.filter((item) => item.instance_id !== instanceId);
     this.iframeByInstance.delete(instanceId);
+    this.instancePane.delete(instanceId);
     await saveLayout(this.layout);
   }
 
   async refreshPlugins(): Promise<void> {
     this.components = new Map((await fetchComponents()).map((c) => [c.id, c]));
+    this.renderGrid();
+  }
+
+  private resolvePaneCount(config: SystemConfig, layout: LayoutItem[]): number {
+    const fromLayout = layout.reduce((max, item) => Math.max(max, item.pane + 1), 1);
+    const fromConfig = config.paneCount ?? 1;
+    return Math.min(MAX_PANES, Math.max(1, fromConfig, fromLayout));
   }
 
   private currentCapacity(config: SystemConfig): GridCapacity {
@@ -201,7 +246,7 @@ export class Workspace {
     }
 
     if (!this.spec || next.cellH !== this.spec.cellH) {
-      this.applySpecToGrid(next);
+      this.applySpecToAllGrids(next);
     }
   }
 
@@ -209,6 +254,10 @@ export class Workspace {
     if (!this.config) return;
 
     this.iframeByInstance.clear();
+    this.instancePane.clear();
+    this.grids.forEach((grid) => grid.destroy(false));
+    this.grids.clear();
+    this.gridEls.clear();
 
     const capacity = this.currentCapacity(this.config);
     const spec = computeGridSpec(capacity, this.renderW, this.renderH, taskbarHeight(this.config));
@@ -220,26 +269,47 @@ export class Workspace {
     this.layout = this.layout.map((item) => clampLayoutItem(item, capacity));
     applyGridSpecToDocument(spec);
 
-    if (this.grid && !capacityChanged) {
-      this.applySpecToGrid(spec);
-      return;
-    }
-
-    if (this.grid) {
-      this.grid.destroy(false);
-      this.grid = null;
+    if (this.activePane >= this.paneCount) {
+      this.activePane = Math.max(0, this.paneCount - 1);
     }
 
     this.slider.innerHTML = '';
+    this.trackEl = document.createElement('div');
+    this.trackEl.className = 'pane-track';
+    this.slider.appendChild(this.trackEl);
+    this.bindPaneSwipe(this.trackEl);
+
+    for (let pane = 0; pane < this.paneCount; pane += 1) {
+      this.buildPane(pane, spec);
+    }
+
+    this.applyPaneTransform();
+    this.onPaneChange(this.activePane, this.paneCount);
+
+    if (capacityChanged) {
+      requestAnimationFrame(() => this.syncAllSquareCellSizes());
+    } else {
+      requestAnimationFrame(() => this.syncAllSquareCellSizes());
+    }
+  }
+
+  private buildPane(pane: number, spec: GridSpec): void {
+    const paneEl = document.createElement('div');
+    paneEl.className = 'workspace-pane';
+    paneEl.dataset.pane = String(pane);
+
     const stage = document.createElement('div');
     stage.className = 'grid-stage';
-    this.gridEl = document.createElement('div');
-    this.gridEl.className = 'grid-stack';
-    this.gridEl.id = 'workspace-grid';
-    stage.appendChild(this.gridEl);
-    this.slider.appendChild(stage);
 
-    this.grid = GridStack.init(
+    const gridEl = document.createElement('div');
+    gridEl.className = 'grid-stack';
+    gridEl.id = `workspace-grid-${pane}`;
+    stage.appendChild(gridEl);
+    paneEl.appendChild(stage);
+    this.trackEl!.appendChild(paneEl);
+    this.gridEls.set(pane, gridEl);
+
+    const grid = GridStack.init(
       {
         column: spec.cols,
         cellHeight: spec.cellH,
@@ -252,76 +322,121 @@ export class Workspace {
         disableOneColumnMode: true,
         draggable: { handle: '.widget-header' },
       },
-      this.gridEl,
+      gridEl,
     );
 
-    this.applyGridSize(spec);
-
-    this.grid.on('change', () => {
-      if (this.editMode) void this.persistLayout();
+    this.applyGridSize(gridEl, spec);
+    grid.on('change', () => {
+      if (this.editMode) void this.persistPaneLayout(pane);
+    });
+    grid.on('resizestop', () => {
+      if (this.spec) gridEl.style.height = `${this.spec.gridPixelH}px`;
     });
 
-    this.grid.on('resizestop', () => {
-      if (this.spec && this.gridEl) {
-        this.gridEl.style.height = `${this.spec.gridPixelH}px`;
-      }
-    });
+    this.grids.set(pane, grid);
 
-    const paneItems = this.layout.filter((item) => item.pane === 0);
+    const paneItems = this.layout.filter((item) => item.pane === pane);
     if (paneItems.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'widget-empty';
-      empty.textContent = 'No widgets — tap Edit, then + to add one.';
+      empty.textContent =
+        pane === this.activePane
+          ? 'No widgets — tap Edit, then + to add one.'
+          : 'Empty page';
       stage.appendChild(empty);
       return;
     }
 
     paneItems.forEach((item) => {
       const component = this.components.get(item.component_id);
-      if (component) this.mountWidget(item, component);
+      if (component) {
+        this.mountWidget(item, component, pane);
+        return;
+      }
+      this.mountUnavailableWidget(item, pane, 'Plugin unavailable or incompatible');
     });
-
-    requestAnimationFrame(() => this.syncSquareCellSize());
   }
 
-  private applyGridSize(spec: GridSpec): void {
-    if (!this.gridEl) return;
-    this.gridEl.style.width = '100%';
-    this.gridEl.style.maxWidth = `${spec.workspaceW}px`;
-    this.gridEl.style.height = `${spec.gridPixelH}px`;
+  private applyPaneTransform(): void {
+    if (!this.trackEl) return;
+    this.trackEl.style.transform = `translateX(-${this.activePane * 100}%)`;
+    this.trackEl.querySelectorAll('.workspace-pane').forEach((el, index) => {
+      el.classList.toggle('pane-active', index === this.activePane);
+    });
   }
 
-  /** Set cellHeight = column width so 1×1 tiles are square on the actual panel. */
-  private syncSquareCellSize(): void {
-    if (!this.grid || !this.spec) return;
-
-    const colW = this.grid.cellWidth();
-    if (!colW || colW < MIN_CELL - 2) return;
-
-    const cell = Math.round(colW);
-    if (Math.abs(cell - this.spec.cellH) < 1) return;
-
-    this.spec = { ...this.spec, cellH: cell, gridPixelH: gridHeight(this.spec.rows, cell, this.spec.gap) };
-    this.grid.cellHeight(cell);
-    applyGridSpecToDocument(this.spec);
-    if (this.gridEl) this.gridEl.style.height = `${this.spec.gridPixelH}px`;
+  private bindPaneSwipe(track: HTMLElement): void {
+    track.addEventListener(
+      'touchstart',
+      (event) => {
+        if (this.paneCount <= 1) return;
+        this.touchStartX = event.changedTouches[0]?.clientX ?? 0;
+      },
+      { passive: true },
+    );
+    track.addEventListener(
+      'touchend',
+      (event) => {
+        if (this.paneCount <= 1) return;
+        const endX = event.changedTouches[0]?.clientX ?? 0;
+        const delta = endX - this.touchStartX;
+        if (Math.abs(delta) < 60) return;
+        if (delta < 0) this.nextPane();
+        else this.prevPane();
+      },
+      { passive: true },
+    );
   }
 
-  private applySpecToGrid(spec: GridSpec): void {
+  private applyGridSize(gridEl: HTMLElement, spec: GridSpec): void {
+    gridEl.style.width = '100%';
+    gridEl.style.maxWidth = `${spec.workspaceW}px`;
+    gridEl.style.height = `${spec.gridPixelH}px`;
+  }
+
+  private syncAllSquareCellSizes(): void {
+    if (!this.spec) return;
+    this.grids.forEach((grid, pane) => {
+      const gridEl = this.gridEls.get(pane);
+      if (!gridEl) return;
+
+      const colW = grid.cellWidth();
+      if (!colW || colW < MIN_CELL - 2) return;
+
+      const cell = Math.round(colW);
+      if (Math.abs(cell - this.spec!.cellH) < 1) return;
+
+      this.spec = {
+        ...this.spec!,
+        cellH: cell,
+        gridPixelH: gridHeight(this.spec!.rows, cell, this.spec!.gap),
+      };
+      grid.cellHeight(cell);
+      applyGridSpecToDocument(this.spec);
+      gridEl.style.height = `${this.spec.gridPixelH}px`;
+    });
+  }
+
+  private applySpecToAllGrids(spec: GridSpec): void {
     this.spec = spec;
     applyGridSpecToDocument(spec);
-    this.applyGridSize(spec);
-    if (!this.grid) return;
-    this.grid.column(spec.cols);
-    this.grid.cellHeight(spec.cellH);
-    this.grid.margin(TILE_MARGIN);
-    requestAnimationFrame(() => this.syncSquareCellSize());
+    this.grids.forEach((grid, pane) => {
+      const gridEl = this.gridEls.get(pane);
+      if (gridEl) this.applyGridSize(gridEl, spec);
+      grid.column(spec.cols);
+      grid.cellHeight(spec.cellH);
+      grid.margin(TILE_MARGIN);
+    });
+    requestAnimationFrame(() => this.syncAllSquareCellSizes());
   }
 
-  private mountWidget(item: LayoutItem, component: ComponentInfo): void {
-    if (!this.grid || !this.config || !this.spec) return;
+  private mountWidget(item: LayoutItem, component: ComponentInfo, pane: number): void {
+    const grid = this.grids.get(pane);
+    if (!grid || !this.config || !this.spec) return;
 
     const clamped = clampLayoutItem(item, this.spec);
+    this.instancePane.set(clamped.instance_id, pane);
+
     const content = document.createElement('div');
     content.className = 'widget-card';
 
@@ -364,7 +479,7 @@ export class Workspace {
     iframe.className = 'widget-iframe';
     iframe.setAttribute(
       'src',
-      `${component.entry_url}?${widgetQuery(this.config, clamped.instance_id)}`,
+      `${component.entry_url}?${widgetQuery(this.config, clamped.instance_id, this.platform)}`,
     );
     iframe.setAttribute('loading', 'lazy');
     iframe.setAttribute('scrolling', 'no');
@@ -387,11 +502,10 @@ export class Workspace {
     });
 
     this.iframeByInstance.set(clamped.instance_id, iframe);
-
     content.appendChild(header);
     content.appendChild(iframe);
 
-    this.grid.addWidget({
+    grid.addWidget({
       id: clamped.instance_id,
       x: clamped.x,
       y: clamped.y,
@@ -400,7 +514,58 @@ export class Workspace {
     });
 
     const mountContent = (): void => {
-      const node = this.grid!.engine.nodes.find((n) => n.id === clamped.instance_id);
+      const node = grid.engine.nodes.find((n) => n.id === clamped.instance_id);
+      const slot = node?.el?.querySelector('.grid-stack-item-content');
+      if (!slot) return;
+      slot.innerHTML = '';
+      slot.appendChild(content);
+    };
+    mountContent();
+    if (!content.isConnected) requestAnimationFrame(mountContent);
+  }
+
+  private mountUnavailableWidget(item: LayoutItem, pane: number, reason: string): void {
+    const grid = this.grids.get(pane);
+    if (!grid || !this.spec) return;
+
+    const clamped = clampLayoutItem(item, this.spec);
+    this.instancePane.set(clamped.instance_id, pane);
+
+    const content = document.createElement('div');
+    content.className = 'widget-card widget-unavailable';
+
+    const header = document.createElement('div');
+    header.className = 'widget-header';
+    header.innerHTML = `
+      ${icon(icons.widget)}
+      <span class="widget-title">Unavailable</span>
+      <button type="button" class="widget-delete-btn" title="Remove widget">
+        ${icon(icons.close)}
+      </button>
+    `;
+
+    header.querySelector('.widget-delete-btn')?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      void this.removeWidget(clamped.instance_id);
+    });
+
+    const body = document.createElement('div');
+    body.className = 'widget-unavailable-body';
+    body.innerHTML = `<p>${reason}</p><p class="muted"><code>${clamped.component_id}</code></p>`;
+
+    content.appendChild(header);
+    content.appendChild(body);
+
+    grid.addWidget({
+      id: clamped.instance_id,
+      x: clamped.x,
+      y: clamped.y,
+      w: clamped.w,
+      h: clamped.h,
+    });
+
+    const mountContent = (): void => {
+      const node = grid.engine.nodes.find((n) => n.id === clamped.instance_id);
       const slot = node?.el?.querySelector('.grid-stack-item-content');
       if (!slot) return;
       slot.innerHTML = '';
@@ -418,7 +583,9 @@ export class Workspace {
     const item = this.layout.find((row) => row.instance_id === instanceId);
     const component = item ? this.components.get(item.component_id) : null;
     if (!item || !component) return;
-    const node = this.grid?.engine.nodes.find((n) => n.id === instanceId);
+    const pane = this.instancePane.get(instanceId) ?? item.pane;
+    const grid = this.grids.get(pane);
+    const node = grid?.engine.nodes.find((n) => n.id === instanceId);
     const titleEl = node?.el?.querySelector('.widget-title');
     if (titleEl) titleEl.textContent = widgetTitle(item, component);
   }
@@ -437,16 +604,20 @@ export class Workspace {
     });
   }
 
-  private async persistLayout(): Promise<void> {
-    if (!this.grid || !this.capacity) return;
-    const byId = new Map(this.layout.map((item) => [item.instance_id, item]));
-    const next: LayoutItem[] = [];
+  private async persistPaneLayout(pane: number): Promise<void> {
+    const grid = this.grids.get(pane);
+    if (!grid || !this.capacity) return;
 
-    this.grid.engine.nodes.forEach((node) => {
+    const byId = new Map(
+      this.layout.filter((item) => item.pane === pane).map((item) => [item.instance_id, item]),
+    );
+    const updated: LayoutItem[] = [];
+
+    grid.engine.nodes.forEach((node) => {
       if (!node.id) return;
       const existing = byId.get(node.id);
       if (!existing) return;
-      next.push(
+      updated.push(
         clampLayoutItem(
           {
             ...existing,
@@ -454,14 +625,20 @@ export class Workspace {
             y: node.y ?? existing.y,
             w: node.w ?? existing.w,
             h: node.h ?? existing.h,
-            pane: 0,
+            pane,
           },
           this.capacity!,
         ),
       );
     });
 
-    this.layout = next;
-    await saveLayout(next);
+    this.layout = [...this.layout.filter((item) => item.pane !== pane), ...updated];
+    await saveLayout(this.layout);
+  }
+
+  private async persistAllPanes(): Promise<void> {
+    for (const pane of this.grids.keys()) {
+      await this.persistPaneLayout(pane);
+    }
   }
 }

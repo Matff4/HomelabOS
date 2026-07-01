@@ -1,6 +1,7 @@
 import {
   deletePlugin,
   fetchMarketplaceCatalog,
+  fetchPlatform,
   fetchPlugins,
   installPlugin,
   updatePlugin,
@@ -8,6 +9,7 @@ import {
 import { icon, icons } from './icons';
 import type { Modals } from './modals';
 import type { MarketplaceCatalog, MarketplaceEntry, PluginSummary } from './store-types';
+import type { PlatformInfo } from './types';
 import { showToast } from './toast';
 
 function semverLt(current: string, latest: string): boolean {
@@ -24,9 +26,16 @@ function semverLt(current: string, latest: string): boolean {
 function catalogEntry(
   entry: MarketplaceEntry,
   installed: PluginSummary | undefined,
-): { status: string; action: 'install' | 'update' | 'installed' | 'bundled' } {
+  platform: PlatformInfo,
+): { status: string; action: 'install' | 'update' | 'installed' | 'bundled' | 'incompatible' } {
+  if (entry.api_version > platform.plugin_api_version) {
+    return { status: 'Requires newer HomelabOS core', action: 'incompatible' };
+  }
   if (installed?.bundled) return { status: 'Bundled with core', action: 'bundled' };
   if (!installed) return { status: 'Not installed', action: 'install' };
+  if (!installed.enabled) {
+    return { status: installed.message ?? 'Incompatible with this core', action: 'incompatible' };
+  }
   if (semverLt(installed.version, entry.version)) {
     return { status: `Update available (${installed.version} → ${entry.version})`, action: 'update' };
   }
@@ -80,12 +89,16 @@ async function renderStore(
   });
 
   try {
-    const [catalog, installed] = await Promise.all([fetchMarketplaceCatalog(), fetchPlugins()]);
+    const [catalog, installed, platform] = await Promise.all([
+      fetchMarketplaceCatalog(),
+      fetchPlugins(),
+      fetchPlatform(),
+    ]);
     const byId = new Map(installed.map((row) => [row.id, row]));
 
     if (tab === 'store') {
-      body.innerHTML = renderCatalog(catalog, byId);
-      bindCatalogActions(modals, body, catalog, onChanged);
+      body.innerHTML = renderCatalog(catalog, byId, platform);
+      bindCatalogActions(modals, body, catalog, platform, onChanged);
     } else {
       body.innerHTML = renderInstalled(installed, catalog);
       bindInstalledActions(modals, body, catalog, onChanged);
@@ -95,15 +108,19 @@ async function renderStore(
   }
 }
 
-function renderCatalog(catalog: MarketplaceCatalog, installed: Map<string, PluginSummary>): string {
+function renderCatalog(
+  catalog: MarketplaceCatalog,
+  installed: Map<string, PluginSummary>,
+  platform: PlatformInfo,
+): string {
   if (catalog.plugins.length === 0) {
     return '<p class="muted">No plugins in the catalog.</p>';
   }
   return `<ul class="store-list">${catalog.plugins
     .map((entry) => {
-      const meta = catalogEntry(entry, installed.get(entry.id));
+      const meta = catalogEntry(entry, installed.get(entry.id), platform);
       const glyph = entry.icon ? icon(entry.icon) : icon(icons.widget);
-      const disabled = meta.action === 'installed' || meta.action === 'bundled';
+      const disabled = meta.action === 'installed' || meta.action === 'bundled' || meta.action === 'incompatible';
       const label =
         meta.action === 'install'
           ? 'Install'
@@ -111,6 +128,8 @@ function renderCatalog(catalog: MarketplaceCatalog, installed: Map<string, Plugi
             ? 'Update'
             : meta.action === 'bundled'
               ? 'Core'
+              : meta.action === 'incompatible'
+                ? 'Unavailable'
               : 'Installed';
       return `<li class="store-row">
         <div class="store-row-main">
@@ -143,12 +162,15 @@ function renderInstalled(installed: PluginSummary[], catalog: MarketplaceCatalog
       const remove = plugin.bundled
         ? '<span class="muted store-tag">Bundled</span>'
         : `<button type="button" class="modal-btn danger store-installed-remove" data-id="${plugin.id}">Remove</button>`;
-      return `<li class="store-row">
+      const status = plugin.enabled
+        ? `<span class="muted store-meta">${plugin.id} · v${plugin.version}</span>`
+        : `<span class="store-tag store-tag-warn">${plugin.message ?? 'Incompatible'}</span>`;
+      return `<li class="store-row ${plugin.enabled ? '' : 'store-row-disabled'}">
         <div class="store-row-main">
           <span class="store-icon">${icon(icons.widget)}</span>
           <div class="store-copy">
             <strong>${plugin.name}</strong>
-            <span class="muted store-meta">${plugin.id} · v${plugin.version}</span>
+            ${status}
           </div>
         </div>
         <div class="store-row-actions">${update}${remove}</div>
@@ -161,6 +183,7 @@ function bindCatalogActions(
   modals: Modals,
   body: Element,
   catalog: MarketplaceCatalog,
+  platform: PlatformInfo,
   onChanged: () => void,
 ): void {
   body.querySelectorAll('.store-action').forEach((btn) => {
@@ -168,11 +191,15 @@ function bindCatalogActions(
       const el = btn as HTMLElement;
       const action = el.dataset.action;
       const id = el.dataset.id;
-      if (!id || action === 'installed' || action === 'bundled') return;
+      if (!id || action === 'installed' || action === 'bundled' || action === 'incompatible') return;
       const entry = catalog.plugins.find((row) => row.id === id);
       if (!entry) return;
 
       const verb = action === 'update' ? 'Update' : 'Install';
+      if (entry.api_version > platform.plugin_api_version) {
+        notifyPluginAction('This plugin requires a newer HomelabOS core.', 'error');
+        return;
+      }
       modals.confirm(`${verb} ${entry.name}?`, `Version ${entry.version}`, async () => {
         const result =
           action === 'update'

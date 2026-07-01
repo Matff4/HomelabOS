@@ -24,3 +24,4 @@ class SystemConfig(BaseModel):
     widgetBarHeight: BarHeight = "medium"
     accentColor: AccentColor = "blue"
     marketplaceUrl: AnyUrl | None = Field(default=DEFAULT_MARKETPLACE_URL)
+    paneCount: int = Field(default=1, ge=1, le=8)

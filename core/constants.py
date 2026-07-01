@@ -2,6 +2,10 @@
 
 CORE_VERSION = "1.0.0"
 PLUGIN_API_VERSION = 1
+SDK_VERSION = "1.0.0"
+
+# Bundled reference plugins — assets may still load for legacy layouts; hidden from store/drawer.
+HIDDEN_BUNDLED_PLUGINS = frozenset({"demo"})
 
 DEFAULT_MARKETPLACE_URL = (
     "https://raw.githubusercontent.com/Matff4/HomelabOS-Plugins/master/index.json"

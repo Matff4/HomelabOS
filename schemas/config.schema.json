@@ -75,6 +75,13 @@
       ],
       "default": "https://raw.githubusercontent.com/Matff4/HomelabOS-Plugins/master/index.json",
       "title": "Marketplaceurl"
+    },
+    "paneCount": {
+      "default": 1,
+      "maximum": 8,
+      "minimum": 1,
+      "title": "Panecount",
+      "type": "integer"
     }
   },
   "title": "HomelabOS System Config",

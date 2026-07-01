@@ -12,7 +12,9 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
 
+from core.constants import HIDDEN_BUNDLED_PLUGINS
 from core.models.manifest import PluginManifest
+from core.plugins.compatibility import assess_plugin_compatibility
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,8 @@ class LoadedPlugin:
     manifest: PluginManifest
     directory: Path
     backend_loaded: bool = False
+    enabled: bool = True
+    incompatible_reason: str | None = None
 
 
 class PluginManager:
@@ -53,10 +57,13 @@ class PluginManager:
                     logger.warning(
                         "Plugin folder %s id mismatch (manifest.id=%s)", entry.name, manifest.id
                     )
+                enabled, reason = assess_plugin_compatibility(manifest)
                 found[manifest.id] = LoadedPlugin(
                     manifest=manifest,
                     directory=entry,
                     backend_loaded=manifest.id in self._routers,
+                    enabled=enabled,
+                    incompatible_reason=reason,
                 )
 
         removed = set(self._routers) - set(found)
@@ -75,7 +82,7 @@ class PluginManager:
 
     def get_backend_router(self, plugin_id: str) -> APIRouter | None:
         plugin = self.plugins.get(plugin_id)
-        if plugin is None:
+        if plugin is None or not plugin.enabled:
             return None
 
         backend_path = plugin.directory / (plugin.manifest.backend or "main.py")
@@ -118,16 +125,26 @@ class PluginManager:
         return router
 
     def summaries(self) -> list[dict]:
-        return [
-            {
-                "id": plugin.manifest.id,
-                "name": plugin.manifest.name,
-                "version": plugin.manifest.version,
-                "enabled": True,
-                "bundled": self._is_bundled(plugin),
-            }
-            for plugin in self.plugins.values()
-        ]
+        rows: list[dict] = []
+        for plugin in self.plugins.values():
+            if self._is_hidden(plugin):
+                continue
+            message = plugin.incompatible_reason
+            if plugin.enabled and plugin.manifest.backend and not plugin.backend_loaded:
+                backend_path = plugin.directory / (plugin.manifest.backend or "main.py")
+                if backend_path.is_file():
+                    message = "Backend failed to load"
+            rows.append(
+                {
+                    "id": plugin.manifest.id,
+                    "name": plugin.manifest.name,
+                    "version": plugin.manifest.version,
+                    "enabled": plugin.enabled,
+                    "bundled": self._is_bundled(plugin),
+                    "message": message if not plugin.enabled or message else None,
+                }
+            )
+        return rows
 
     def _is_bundled(self, plugin: LoadedPlugin) -> bool:
         try:
@@ -135,9 +152,14 @@ class PluginManager:
         except (ValueError, OSError):
             return plugin.directory.parent.resolve() == self.bundled_dir.resolve()
 
+    def _is_hidden(self, plugin: LoadedPlugin) -> bool:
+        return self._is_bundled(plugin) and plugin.manifest.id in HIDDEN_BUNDLED_PLUGINS
+
     def components(self) -> list[dict]:
         rows: list[dict] = []
         for plugin in self.plugins.values():
+            if self._is_hidden(plugin) or not plugin.enabled:
+                continue
             for component in plugin.manifest.components:
                 if component.type not in ("widget", "app"):
                     continue
@@ -160,6 +182,12 @@ class PluginManager:
         plugin = self.plugins.get(plugin_id)
         if plugin is None:
             raise HTTPException(status_code=404, detail="Plugin not found")
+        if not plugin.enabled:
+            return {
+                "id": plugin_id,
+                "status": "error",
+                "message": plugin.incompatible_reason or "Plugin incompatible with this core version",
+            }
         if plugin.manifest.backend and not plugin.backend_loaded:
             return {"id": plugin_id, "status": "degraded", "message": "Backend failed to load"}
         backend_path = plugin.directory / (plugin.manifest.backend or "main.py")

@@ -9,6 +9,9 @@ export interface HomelabOSPlatform {
   kiosk: boolean;
   theme: Theme;
   accent: string;
+  coreVersion: string;
+  pluginApiVersion: number;
+  sdkVersion: string;
 }
 
 export type Unsubscribe = () => void;

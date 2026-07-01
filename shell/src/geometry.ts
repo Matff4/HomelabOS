@@ -1,4 +1,4 @@
-import type { DisplayInfo, LayoutItem, SystemConfig, SystemStats } from './types';
+import type { DisplayInfo, LayoutItem, PlatformInfo, SystemConfig, SystemStats } from './types';
 
 const BAR_HEIGHT: Record<string, number> = { small: 36, medium: 48, big: 64 };
 
@@ -180,13 +180,22 @@ export function applyGridSpecToDocument(spec: GridSpec): void {
   document.documentElement.style.setProperty('--grid-pixel-h', `${spec.gridPixelH}px`);
 }
 
-export function widgetQuery(config: SystemConfig, instanceId: string): string {
+export function widgetQuery(
+  config: SystemConfig,
+  instanceId: string,
+  platform?: PlatformInfo | null,
+): string {
   const params = new URLSearchParams({
     kiosk: 'true',
     theme: config.theme,
     accent: config.accentColor,
     instance: instanceId,
   });
+  if (platform) {
+    params.set('coreVersion', platform.core_version);
+    params.set('pluginApiVersion', String(platform.plugin_api_version));
+    params.set('sdkVersion', platform.sdk_version);
+  }
   return params.toString();
 }
 

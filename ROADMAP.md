@@ -4,7 +4,7 @@
 
 A kiosk dashboard on Raspberry Pi for **monitoring your homelab** — Proxmox nodes, services, sensors, and anything else via plugins.
 
-Runs on embedded Linux (Pi + Chromium + Cage). **HomelabOS is the platform**; plugins ship separately in **[HomelabOS-Plugins](https://github.com/Matff4/HomelabOS-Plugins)** (planned) and install via an in-shell store. JSON on disk for persistence.
+Runs on embedded Linux (Pi + Chromium + Cage). **HomelabOS is the platform**; plugins ship separately in **[HomelabOS-Plugins](https://github.com/Matff4/HomelabOS-Plugins)** and install via an in-shell store. JSON on disk for persistence.
 
 ## Repository layout
 
@@ -13,13 +13,13 @@ homelabos/                    # Platform (this repo)
 ├── core/                     # Python platform (FastAPI)
 ├── shell/                    # TypeScript kiosk UI (Vite)
 ├── sdk/                      # Plugin SDK (built → shell/dist/sdk/)
-├── apps/demo/                # Reference plugin only (bundled)
+├── apps/demo/                # Reference plugin (bundled, hidden from store/drawer)
 ├── schemas/                  # JSON Schema for manifest, layout, config
 ├── data/                     # Runtime JSON (gitignored contents)
 ├── scripts/                  # install.sh, dev helpers, systemd templates
 └── install.sh
 
-homelabos-plugins/            # Separate repo (planned)
+homelabos-plugins/            # Separate repo
 ├── index.json                # Marketplace catalog
 ├── plugins/                  # Plugin packages (pve, fan, esxi, …)
 └── .github/workflows/        # Manifest validation + release tarballs
@@ -27,11 +27,13 @@ homelabos-plugins/            # Separate repo (planned)
 
 ## Strategy
 
-1. **Finish the platform** (shell, SDK docs, install/update API, store UI).
-2. **Ship the ecosystem repo** with a catalog + at least one real plugin.
+1. **Stabilize the platform** (contracts, compatibility, panes, polish).
+2. **Ship the ecosystem repo** with a catalog + real plugins.
 3. **Build rich integrations** (PVE, ESXi, GPIO, …) only as store plugins — not inside core.
 
 Core stays stable; plugins move fast without breaking the kiosk.
+
+**HomelabOS 1.0.x policy:** `manifest.api_version: 1` + SDK + postMessage + `/api/components` are frozen. Breaking changes require HomelabOS 2.0 and `api_version: 2`.
 
 ---
 
@@ -65,16 +67,15 @@ Core stays stable; plugins move fast without breaking the kiosk.
 - [x] Display-aware grid (physical panel → row/col capacity; browser → tile pixel size)
 - [x] Square tiles + inter-widget gaps (GridStack tile margin, display-verified)
 - [x] Modals: settings, power, confirm, app drawer
-- [x] Widget chrome (title bar, configure, remove in edit mode)
-- [x] Widget config modal (`PATCH /api/layout/widget`, JSON editor)
-- [ ] Multi-pane carousel (deferred — layout model supports `pane`, shell uses pane 0 only)
+- [x] Widget chrome (title bar, manifest-based settings form, remove in edit mode)
+- [x] Multi-pane carousel (`pane` in layout + `paneCount` in config, swipe + taskbar nav)
 
 ### Phase 3 — SDK + plugin author tooling ✅
 - [x] `homelabos-sdk` browser package (subscribe, getConfig, saveConfig)
 - [x] `docs/PLUGIN_AUTHOR.md` (manifest, routes, SDK, config, testing on Pi)
 - [x] `scripts/create-plugin.py` scaffold
 - [x] Document `api_version` compatibility rules in CONTRACTS
-- [ ] Optional: `REQUEST_SETTINGS` / `SETTINGS_SCHEMA` iframe protocol (deferred — JSON config modal today)
+- [x] SDK exposes `platform.coreVersion`, `pluginApiVersion`, `sdkVersion` via iframe query params
 
 ### Phase 4 — Plugin platform ✅
 - [x] `data/registry.json` — installed plugin metadata
@@ -82,16 +83,28 @@ Core stays stable; plugins move fast without breaking the kiosk.
 - [x] Implement `POST /api/plugins/install` (tarball URL → extract → register)
 - [x] Implement `POST /api/plugins/{id}/update` and `DELETE /api/plugins/{id}`
 - [x] `api_version` + HomelabOS version checks on install
-- [x] Service reload strategy documented (restart vs hot-mount)
+- [x] Hot-load static assets + backend routes after install (no restart)
 
 ### Phase 5 — Marketplace UI ✅
 - [x] Default `marketplaceUrl` → HomelabOS-Plugins `index.json`
 - [x] Shell store: browse catalog, install, list installed, update available
 - [x] Settings: configure marketplace URL
 - [x] Catalog schema + docs (`docs/MARKETPLACE.md`) for HomelabOS-Plugins repo bootstrap
+- [x] Toast notifications for install/update/remove
 
-### Phase 6 — Plugin content (ongoing, in HomelabOS-Plugins) ← **current**
-- [x] HomelabOS-Plugins repo v0.1 — catalog + **uptime** widget ([github.com/Matff4/HomelabOS-Plugins](https://github.com/Matff4/HomelabOS-Plugins))
+### Phase 5.5 — Core stabilization ✅ ← **complete**
+- [x] `GET /api/platform` — core, SDK, and supported manifest api versions
+- [x] Boot-time compatibility re-check (`requires.core`, `api_version`) — disable incompatible plugins
+- [x] Incompatible plugins visible in store (Installed tab) but excluded from widget drawer
+- [x] Demo plugin hidden from store list and widget drawer (assets remain for legacy layouts)
+- [x] Orphan/unavailable widget placeholders when component missing
+- [x] Contract tests (`tests/test_contracts.py`) for platform, postMessage types, SSE channels
+- [x] Compatibility tests (`tests/test_compatibility.py`)
+- [x] `GET /api/system/backup` + `scripts/backup-data.py`
+- [x] HomelabOS 1.0.x no-breaking-changes policy documented above
+
+### Phase 6 — Plugin content (next) ← **current**
+- [x] HomelabOS-Plugins repo v0.1 — catalog + **uptime** widget
 - [ ] Reference plugin beyond demo (GPIO, read-only PVE, …)
 - [ ] PVE integration (full)
 - [ ] ESXi, fan control, and community plugins
@@ -99,8 +112,8 @@ Core stays stable; plugins move fast without breaking the kiosk.
 
 ### Phase 7 — Production hardening
 - [ ] systemd ordering, Chromium crash recovery
-- [ ] Fast service restart (SSE graceful shutdown) ✅
-- [ ] `data/` backup tarball
+- [x] Fast service restart (SSE graceful shutdown)
+- [x] `data/` backup tarball
 - [ ] Pre-baked image deps (no runtime pip on device)
 - [ ] Performance: off-screen iframe detach, kiosk taskbar blur removal
 
@@ -112,25 +125,29 @@ Frozen request/response shapes: **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
 
 ```
 GET  /api/health
+GET  /api/platform                 core + SDK + supported api versions
 GET  /api/system/stats
 GET  /api/system/display
+GET  /api/system/backup            data/ tarball download
 POST /api/system/power              { "action": "reboot"|"shutdown"|"restart-kiosk" }
 
 GET  /api/config
-PUT  /api/config
+PUT  /api/config                    includes paneCount (1–8)
 
 GET  /api/layout
 PUT  /api/layout
 PATCH /api/layout/widget            { "instance_id", "config" }
 
-GET  /api/components                Flattened manifest components (shell drawer)
+GET  /api/components                enabled plugins only (no hidden demo)
 GET  /api/events                    SSE (shell only)
 
-GET  /api/plugins
+GET  /api/plugins                   user + non-hidden plugins; enabled flag
 GET  /api/plugins/{id}/health
-POST /api/plugins/install           Phase 4 ✅
-POST /api/plugins/{id}/update       Phase 4 ✅
-DELETE /api/plugins/{id}            Phase 4 ✅
+POST /api/plugins/install
+POST /api/plugins/{id}/update
+DELETE /api/plugins/{id}
+
+GET  /api/marketplace/catalog
 
 /api/plugins/{id}/*                 Plugin backend routes
 /apps/{plugin_id}/…                 Plugin static assets
@@ -138,10 +155,8 @@ DELETE /api/plugins/{id}            Phase 4 ✅
 
 ## SDK surface
 
-Implemented in `sdk/src/`; types frozen in `docs/CONTRACTS.md`.
-
 ```ts
-HomelabOS.version / .platform
+HomelabOS.version / .platform   // includes coreVersion, pluginApiVersion, sdkVersion
 HomelabOS.fetch(url, opts)
 HomelabOS.subscribe(channel, fn)
 HomelabOS.getConfig() / .saveConfig(obj)
@@ -149,20 +164,13 @@ HomelabOS.getConfig() / .saveConfig(obj)
 
 ## Current sprint
 
-**Phase 2 complete** (shell, grid, modals, widget chrome — verified on Pi via VNC).
+**Phase 5.5 complete** — platform contracts enforced, demo hidden, panes live, backup available.
 
-**Phase 3 complete** — plugin author docs + scaffold.
-
-**Phase 4 complete** — install/update/delete API + registry.
-
-**Phase 5 complete** — in-shell plugin store + marketplace API.
-
-**Next: Phase 6** — real plugins in [HomelabOS-Plugins](https://github.com/Matff4/HomelabOS-Plugins) (PVE, GPIO, …).
+**Next: Phase 6** — real plugins in [HomelabOS-Plugins](https://github.com/Matff4/HomelabOS-Plugins) once you're ready to build content on this foundation.
 
 ## Performance goals (Phase 7)
 
-- Replace CSS pane carousel with `transform`/`translateX` when multi-pane ships
 - One SSE connection in shell (done)
-- Pause or detach off-screen widget iframes
+- Pause or detach off-screen widget iframes (multi-pane: inactive panes)
 - Remove `backdrop-filter: blur()` on taskbar in kiosk mode
 - `content-visibility: auto` on off-screen panes

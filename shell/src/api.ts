@@ -1,6 +1,5 @@
-import type { ComponentInfo, DisplayInfo, LayoutItem, SSEMessage, SystemConfig } from './types';
+import type { ComponentInfo, DisplayInfo, LayoutItem, PlatformInfo, SSEMessage, SystemConfig } from './types';
 import type { MarketplaceCatalog, PluginActionResult, PluginSummary } from './store-types';
-import type { GridCapacity } from './geometry';
 
 const ACCENT: Record<string, string> = {
   blue: '#89b4fa',
@@ -76,6 +75,12 @@ export async function deletePlugin(id: string): Promise<PluginActionResult> {
     const body = (await res.json().catch(() => null)) as { detail?: string } | null;
     throw new Error(body?.detail ?? 'Remove failed');
   }
+  return res.json();
+}
+
+export async function fetchPlatform(): Promise<PlatformInfo> {
+  const res = await fetch('/api/platform');
+  if (!res.ok) throw new Error('Failed to load platform info');
   return res.json();
 }
 
@@ -182,28 +187,3 @@ export class ShellSSE {
 }
 
 export const shellSSE = new ShellSSE();
-
-export async function ensureDemoLayout(
-  components: ComponentInfo[],
-  capacity: GridCapacity,
-): Promise<LayoutItem[]> {
-  const layout = await fetchLayout();
-  if (layout.length > 0) return layout;
-
-  const demo = components.find((c) => c.id === 'demo_widget');
-  if (!demo) return layout;
-
-  const size = demo.size ?? { w: 3, h: 1 };
-  const seeded: LayoutItem = {
-    instance_id: `inst_${Date.now()}`,
-    component_id: demo.id,
-    x: 0,
-    y: 0,
-    w: Math.min(size.w, capacity.cols),
-    h: Math.min(size.h, capacity.rows),
-    pane: 0,
-    config: { title: 'HomelabOS' },
-  };
-  await saveLayout([seeded]);
-  return [seeded];
-}

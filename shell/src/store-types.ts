@@ -4,6 +4,7 @@ export interface PluginSummary {
   version: string;
   enabled: boolean;
   bundled?: boolean;
+  message?: string | null;
 }
 
 export interface MarketplaceEntry {

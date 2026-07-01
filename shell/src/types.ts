@@ -6,6 +6,14 @@ export interface SystemConfig {
   widgetBarHeight: 'small' | 'medium' | 'big';
   accentColor: 'blue' | 'green' | 'purple' | 'red' | 'orange' | 'yellow';
   marketplaceUrl?: string | null;
+  paneCount?: number;
+}
+
+export interface PlatformInfo {
+  core_version: string;
+  plugin_api_version: number;
+  sdk_version: string;
+  supported_manifest_api_versions: number[];
 }
 
 export interface SystemStats {

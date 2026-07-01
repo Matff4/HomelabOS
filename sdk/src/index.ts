@@ -9,6 +9,7 @@ import type {
   SSERelayPayload,
   Unsubscribe,
 } from './types';
+import { SDK_VERSION } from './types';
 
 const ACCENT_MAP: Record<string, string> = {
   blue: '#89b4fa',
@@ -31,6 +32,9 @@ const defaultPlatform: HomelabOSPlatform = {
   kiosk: params?.get('kiosk') === 'true',
   theme: params?.get('theme') === 'light' ? 'light' : 'dark',
   accent: resolveAccent(params?.get('accent')),
+  coreVersion: params?.get('coreVersion') ?? 'unknown',
+  pluginApiVersion: Number.parseInt(params?.get('pluginApiVersion') ?? '1', 10) || 1,
+  sdkVersion: params?.get('sdkVersion') ?? SDK_VERSION,
 };
 
 let instanceId: string | null = params?.get('instance') || null;
@@ -73,7 +77,7 @@ function handleParentMessage(event: MessageEvent): void {
 
 function createHomelabOS(): HomelabOSStatic {
   return {
-    version: '1.0.0',
+    version: SDK_VERSION,
     platform: defaultPlatform,
 
     fetch(url: string, opts?: RequestInit): Promise<Response> {

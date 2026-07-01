@@ -24,6 +24,20 @@ export class Taskbar {
         <span class="os-title">Homelab OS</span>
         <span class="sse-dot" id="sse-dot" title="Event stream"></span>
       </div>
+      <div class="taskbar-section taskbar-center">
+        <div class="pane-controls" id="pane-controls" hidden>
+          <button type="button" class="taskbar-btn pane-btn" id="btn-pane-prev" title="Previous page">
+            ${icon(icons.chevronLeft)}
+          </button>
+          <span class="pane-indicator" id="pane-indicator">1 / 1</span>
+          <button type="button" class="taskbar-btn pane-btn" id="btn-pane-next" title="Next page">
+            ${icon(icons.chevronRight)}
+          </button>
+          <button type="button" class="taskbar-btn edit-only-btn pane-add-btn" id="btn-pane-add" title="Add page">
+            ${icon(icons.addPane)}
+          </button>
+        </div>
+      </div>
       <div class="taskbar-section taskbar-right">
         <div class="stat-container">
           <div class="stat-badge" id="stat-cpu">${icon(icons.cpu)}<span>--%</span></div>
@@ -74,6 +88,25 @@ export class Taskbar {
 
   onPower(handler: () => void): void {
     this.root.querySelector('#btn-power')?.addEventListener('click', handler);
+  }
+
+  onPanePrev(handler: () => void): void {
+    this.root.querySelector('#btn-pane-prev')?.addEventListener('click', handler);
+  }
+
+  onPaneNext(handler: () => void): void {
+    this.root.querySelector('#btn-pane-next')?.addEventListener('click', handler);
+  }
+
+  onAddPane(handler: () => void): void {
+    this.root.querySelector('#btn-pane-add')?.addEventListener('click', handler);
+  }
+
+  setPaneIndicator(active: number, total: number): void {
+    const controls = this.root.querySelector('#pane-controls') as HTMLElement | null;
+    const label = this.root.querySelector('#pane-indicator');
+    if (controls) controls.hidden = total <= 1;
+    if (label) label.textContent = `${active + 1} / ${total}`;
   }
 
   setEditActive(active: boolean): void {

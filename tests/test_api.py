@@ -91,15 +91,14 @@ def test_plugins_empty(client):
     assert response.json() == []
 
 
-def test_demo_plugin(client_with_demo):
+def test_demo_plugin_hidden_from_shell_lists(client_with_demo):
     plugins = client_with_demo.get("/api/plugins")
     assert plugins.status_code == 200
-    assert len(plugins.json()) == 1
-    assert plugins.json()[0]["id"] == "demo"
+    assert plugins.json() == []
 
     components = client_with_demo.get("/api/components")
     assert components.status_code == 200
-    assert any(row["id"] == "demo_widget" for row in components.json())
+    assert not any(row["id"] == "demo_widget" for row in components.json())
 
     health = client_with_demo.get("/api/plugins/demo/health")
     assert health.status_code == 200

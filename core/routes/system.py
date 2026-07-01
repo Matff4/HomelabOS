@@ -1,10 +1,13 @@
 import logging
 import shutil
 import subprocess
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import Response
 
 from core.models.api import DisplayInfo, PowerRequest, SystemStats
+from core.services.backup import create_data_backup
 from core.services.system import collect_system_stats, detect_display
 from core.settings import settings
 
@@ -50,3 +53,14 @@ async def system_power(body: PowerRequest) -> dict[str, str]:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail="systemctl not available") from exc
     return {"status": "accepted", "action": body.action}
+
+
+@router.get("/api/system/backup")
+async def system_backup() -> Response:
+    payload = create_data_backup(settings.data_dir)
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    return Response(
+        content=payload,
+        media_type="application/gzip",
+        headers={"Content-Disposition": f'attachment; filename="homelabos-data-{stamp}.tar.gz"'},
+    )
