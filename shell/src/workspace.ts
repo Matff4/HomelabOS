@@ -261,6 +261,12 @@ export class Workspace {
       if (this.editMode) void this.persistLayout();
     });
 
+    this.grid.on('resizestop', () => {
+      if (this.spec && this.gridEl) {
+        this.gridEl.style.height = `${this.spec.gridPixelH}px`;
+      }
+    });
+
     const paneItems = this.layout.filter((item) => item.pane === 0);
     if (paneItems.length === 0) {
       const empty = document.createElement('div');
@@ -321,12 +327,17 @@ export class Workspace {
 
     const header = document.createElement('div');
     header.className = 'widget-header';
+    const settingsBtn =
+      component.settings && component.settings.length > 0
+        ? `<button type="button" class="widget-settings-btn" title="Configure widget">
+        ${icon(icons.settings)}
+      </button>`
+        : '';
+
     header.innerHTML = `
       ${icon(component.icon || icons.widget)}
       <span class="widget-title">${widgetTitle(clamped, component)}</span>
-      <button type="button" class="widget-settings-btn" title="Configure widget">
-        ${icon(icons.settings)}
-      </button>
+      ${settingsBtn}
       <button type="button" class="widget-delete-btn" title="Remove widget">
         ${icon(icons.close)}
       </button>
@@ -335,10 +346,10 @@ export class Workspace {
     header.querySelector('.widget-settings-btn')?.addEventListener('click', (event) => {
       event.stopPropagation();
       const layoutItem = this.layout.find((row) => row.instance_id === clamped.instance_id);
-      if (!layoutItem) return;
-      this.modals.openWidgetConfig(
-        clamped.instance_id,
+      if (!layoutItem || !component.settings?.length) return;
+      this.modals.openWidgetSettings(
         widgetTitle(layoutItem, component),
+        component.settings,
         layoutItem.config,
         (next) => this.applyWidgetConfig(clamped.instance_id, next),
       );
@@ -356,6 +367,7 @@ export class Workspace {
       `${component.entry_url}?${widgetQuery(this.config, clamped.instance_id)}`,
     );
     iframe.setAttribute('loading', 'lazy');
+    iframe.setAttribute('scrolling', 'no');
     iframe.setAttribute('title', component.name);
 
     iframe.addEventListener('load', () => {

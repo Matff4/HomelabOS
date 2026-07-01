@@ -33,6 +33,21 @@ export interface LayoutItem {
   config: Record<string, unknown>;
 }
 
+export type WidgetSettingType = 'text' | 'number' | 'boolean' | 'select' | 'password';
+
+export interface WidgetSettingOption {
+  label: string;
+  value: string;
+}
+
+export interface WidgetSetting {
+  key: string;
+  label: string;
+  type: WidgetSettingType;
+  default?: string | number | boolean | null;
+  options?: WidgetSettingOption[] | null;
+}
+
 export interface ComponentInfo {
   id: string;
   plugin_id: string;
@@ -42,6 +57,7 @@ export interface ComponentInfo {
   entry_url: string;
   size?: { w: number; h: number } | null;
   min_size?: { w: number; h: number } | null;
+  settings?: WidgetSetting[] | null;
 }
 
 export interface SSEMessage {

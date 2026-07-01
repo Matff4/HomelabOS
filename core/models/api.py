@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from core.models.config import SystemConfig
 from core.models.layout import LayoutItem
-from core.models.manifest import ComponentSize, ComponentType
+from core.models.manifest import ComponentSize, ComponentType, SettingOption, SettingType
 
 
 class HealthResponse(BaseModel):
@@ -78,6 +78,16 @@ class WidgetConfigPatch(BaseModel):
     config: dict
 
 
+class WidgetSettingInfo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    label: str
+    type: SettingType
+    default: str | int | float | bool | None = None
+    options: list[SettingOption] | None = None
+
+
 class ComponentInfo(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -89,6 +99,7 @@ class ComponentInfo(BaseModel):
     entry_url: str
     size: ComponentSize | None = None
     min_size: ComponentSize | None = None
+    settings: list[WidgetSettingInfo] | None = None
 
 
 # Re-export document types used by config/layout routes

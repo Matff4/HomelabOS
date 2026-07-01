@@ -1,10 +1,12 @@
-import type { ComponentInfo, SystemConfig } from './types';
+import type { ComponentInfo, SystemConfig, WidgetSetting } from './types';
 import { applyTheme, saveConfig } from './api';
 import { selectOptions } from './format';
 import { icon, icons } from './icons';
 import { openPluginStore } from './store-modal';
+import { showToast } from './toast';
+import { readWidgetSettingsForm, renderWidgetSettingsForm } from './widget-settings';
 
-type ConfirmHandler = () => void | Promise<void>;
+type ConfirmHandler = () => void | Promise<void | boolean>;
 
 export class Modals {
   private readonly root: HTMLElement;
@@ -74,9 +76,11 @@ export class Modals {
     `);
     this.root.querySelector('#modal-confirm')?.addEventListener('click', () => {
       void Promise.resolve(onConfirm())
-        .then(() => this.close())
+        .then((keepOpen) => {
+          if (keepOpen !== false) this.close();
+        })
         .catch((err) => {
-          alert(err instanceof Error ? err.message : 'Action failed');
+          showToast(err instanceof Error ? err.message : 'Action failed', 'error');
         });
     });
   }
@@ -225,46 +229,39 @@ export class Modals {
     });
   }
 
-  openWidgetConfig(
-    instanceId: string,
+  openWidgetSettings(
     widgetName: string,
+    settings: WidgetSetting[],
     config: Record<string, unknown>,
     onSave: (next: Record<string, unknown>) => Promise<void>,
   ): void {
-    const json = JSON.stringify(config, null, 2);
     this.open(`
       <div class="modal-backdrop">
-        <div class="modal-card modal-wide">
+        <div class="modal-card modal-widget-settings">
           <div class="modal-header">
             <h2>${widgetName}</h2>
             <button type="button" class="taskbar-btn modal-close-btn" data-modal-close title="Close">
               ${icon(icons.close)}
             </button>
           </div>
-          <form id="widget-config-form" class="modal-body">
-            <p class="muted">Instance <code>${instanceId}</code></p>
-            <label class="setting-row">Configuration (JSON)
-              <textarea id="widget-config-json" class="config-json" rows="6" spellcheck="false">${json}</textarea>
-            </label>
+          <form id="widget-settings-form" class="modal-body">
+            <div class="widget-settings-form">
+              ${renderWidgetSettingsForm(settings, config)}
+            </div>
           </form>
           <div class="modal-footer">
             <button type="button" class="modal-btn" data-modal-close>Cancel</button>
-            <button type="submit" form="widget-config-form" class="modal-btn primary">Save</button>
+            <button type="submit" form="widget-settings-form" class="modal-btn primary">Save</button>
           </div>
         </div>
       </div>
     `);
 
-    const form = this.root.querySelector('#widget-config-form') as HTMLFormElement | null;
+    const form = this.root.querySelector('#widget-settings-form') as HTMLFormElement | null;
     form?.addEventListener('submit', (event) => {
       event.preventDefault();
-      const raw = (this.root.querySelector('#widget-config-json') as HTMLTextAreaElement).value;
-      try {
-        const next = JSON.parse(raw) as Record<string, unknown>;
-        void onSave(next).then(() => this.close());
-      } catch {
-        alert('Invalid JSON — check syntax and try again.');
-      }
+      const next = readWidgetSettingsForm(form, settings, config);
+      void onSave(next).then(() => this.close());
     });
   }
 }

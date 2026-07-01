@@ -12,7 +12,15 @@
       "icon": "widgets",
       "entry": "src/widget.html",
       "size": { "w": 2, "h": 2 },
-      "min_size": { "w": 2, "h": 2 }
+      "min_size": { "w": 2, "h": 2 },
+      "settings": [
+        {
+          "key": "title",
+          "label": "Widget title",
+          "type": "text",
+          "default": "Demo Widget"
+        }
+      ]
     }
   ]
 }

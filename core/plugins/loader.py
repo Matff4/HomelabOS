@@ -151,6 +151,7 @@ class PluginManager:
                         "entry_url": f"/apps/{plugin.manifest.id}/{component.entry}",
                         "size": component.size.model_dump() if component.size else None,
                         "min_size": component.min_size.model_dump() if component.min_size else None,
+                        "settings": [s.model_dump() for s in component.settings] if component.settings else None,
                     }
                 )
         return rows

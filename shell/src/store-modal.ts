@@ -8,6 +8,7 @@ import {
 import { icon, icons } from './icons';
 import type { Modals } from './modals';
 import type { MarketplaceCatalog, MarketplaceEntry, PluginSummary } from './store-types';
+import { showToast } from './toast';
 
 function semverLt(current: string, latest: string): boolean {
   const parse = (value: string) => value.split('.').map((part) => Number.parseInt(part, 10) || 0);
@@ -32,8 +33,8 @@ function catalogEntry(
   return { status: `Installed (${installed.version})`, action: 'installed' };
 }
 
-function showRestartNotice(modals: Modals, message: string): void {
-  modals.alert('Plugin store', message);
+function notifyPluginAction(message: string, variant: 'success' | 'error' = 'success'): void {
+  showToast(message, variant);
 }
 
 export function openPluginStore(modals: Modals, onChanged: () => void): void {
@@ -178,8 +179,9 @@ function bindCatalogActions(
             ? await updatePlugin(entry.id, entry.tarball_url)
             : await installPlugin(entry.tarball_url);
         onChanged();
-        showRestartNotice(modals, result.message);
-        void renderStore(modals, onChanged, 'store');
+        notifyPluginAction(result.message);
+        await renderStore(modals, onChanged, 'store');
+        return false;
       }, false);
     });
   });
@@ -199,8 +201,9 @@ function bindInstalledActions(
       modals.confirm(`Update ${entry.name}?`, `Install version ${entry.version}`, async () => {
         const result = await updatePlugin(id, entry.tarball_url);
         onChanged();
-        showRestartNotice(modals, result.message);
-        void renderStore(modals, onChanged, 'installed');
+        notifyPluginAction(result.message);
+        await renderStore(modals, onChanged, 'installed');
+        return false;
       }, false);
     });
   });
@@ -211,8 +214,9 @@ function bindInstalledActions(
       modals.confirm('Remove plugin?', `Remove ${id} from this device`, async () => {
         const result = await deletePlugin(id);
         onChanged();
-        showRestartNotice(modals, result.message);
-        void renderStore(modals, onChanged, 'installed');
+        notifyPluginAction(result.message);
+        await renderStore(modals, onChanged, 'installed');
+        return false;
       });
     });
   });
